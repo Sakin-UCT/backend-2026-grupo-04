@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, status
+# Endpoints para la gestión de categorías de estación
+from fastapi import APIRouter, HTTPException, status               
 from typing import List
 from app.schemas.categoria_schema import CategoriaCreate, CategoriaResponse
 from app.repositories.categoria_repo import categoria_repositorio
