@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from typing import List
-from app.schemas.cliente_schema import ClienteCreate, ClienteUpdate, ClienteResponse
-from app.repositories.cliente_repo import cliente_repositorio
+from schemas.cliente_schema import ClienteCreate, ClienteResponse, ClienteUpdate
+from repositories.cliente_repo import cliente_repositorio
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
 

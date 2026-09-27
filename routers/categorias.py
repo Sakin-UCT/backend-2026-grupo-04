@@ -1,8 +1,8 @@
 # Endpoints para la gestión de categorías de estación
-from fastapi import APIRouter, HTTPException, status               
+from fastapi import APIRouter, HTTPException, status
 from typing import List
-from app.schemas.categoria_schema import CategoriaCreate, CategoriaResponse
-from app.repositories.categoria_repo import categoria_repositorio
+from schemas.categoria_schema import CategoriaCreate, CategoriaResponse
+from repositories.categoria_repo import categoria_repositorio
 
 router = APIRouter(prefix="/categorias", tags=["CategoriasEstacion"])
 
