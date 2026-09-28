@@ -22,8 +22,3 @@ class Reserva:
     costo: float
     estado: EstadoReserva = EstadoReserva.CONFIRMADA
     paso_por_en_curso: bool = False
-
-
-from dataclasses import dataclass
-from datetime import date
-from enum import Enum
