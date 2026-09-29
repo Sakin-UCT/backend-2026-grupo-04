@@ -6,7 +6,7 @@ class ClienteBase(BaseModel):
     correo: EmailStr
 
 class ClienteCreate(ClienteBase):
-    pass  
+    pass
 
 class ClienteResponse(ClienteBase):
     id: int
