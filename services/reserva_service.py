@@ -1,22 +1,22 @@
-from repositories import reserva_repo
+from repositories.reserva_repo import reserva_repositorio
 from services import estacion_service
 
-def crear_reserva(cliente_id, estacion_id, fecha, turno):
-    estacion_service.validar_disponibilidad_reserva(estacion_id)
+def crear_reserva(datos):
+    estacion_service.validar_disponibilidad_reserva(datos.estacion_id)
 
-    hay_conflicto = reserva_repo.existe_conflicto(estacion_id, fecha, turno)
+    hay_conflicto = reserva_repositorio.existe_conflicto(datos.estacion_id, datos.fecha, datos.turno)
     if hay_conflicto:
         raise ValueError("Estacion ya reservada para este turno")
-    nueva_reserva = reserva_repo.crear(cliente_id, estacion_id, fecha, turno)
+    nueva_reserva = reserva_repositorio.guardar(datos)
 
     return nueva_reserva
 
 def cambiar_estado(reserva_id, nuevo_estado):
-    reserva = reserva_repo.obtener(reserva_id)
+    reserva = reserva_repositorio.obtener_por_id(reserva_id)
     if reserva is None:
         raise ValueError("Reserva inexistente")
-    
+
     if nuevo_estado == "completada" and reserva.estado != "en_curso":
         raise ValueError("La reserva aun no completa el ciclo")
 
-    return reserva_repo.actualizar_estado(reserva_id, nuevo_estado)
+    return reserva_repositorio.actualizar(reserva_id, nuevo_estado)

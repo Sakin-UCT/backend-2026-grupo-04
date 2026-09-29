@@ -1,6 +1,6 @@
 import math
 from fastapi import APIRouter, HTTPException
-from repositories import reserva_repo
+from repositories.reserva_repo import reserva_repositorio
 from schemas.reserva_schema import ReservaCreate, ReservaUpdate
 from services import reserva_service
 
@@ -8,7 +8,7 @@ router = APIRouter(prefix="/reservas", tags=["Reservas"])
 
 @router.get("/{reserva_id}")
 def obtener_reserva(reserva_id: int):
-    reserva = reserva_repo.obtener(reserva_id)
+    reserva = reserva_repositorio.obtener_por_id(reserva_id)
     if reserva is None:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
     return reserva
@@ -16,7 +16,7 @@ def obtener_reserva(reserva_id: int):
 @router.post("")
 def crear_reserva(datos: ReservaCreate):
     try:
-        reserva = reserva_service.crear_reserva(datos.cliente_id, datos.estacion_id, datos.fecha, datos.turno)
+        reserva = reserva_service.crear_reserva(datos)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return reserva
@@ -31,13 +31,13 @@ def actualizar_estado_reserva(reserva_id: int, datos: ReservaUpdate):
 
 @router.delete("/{reserva_id}", status_code=204)
 def eliminar_reserva(reserva_id: int):
-    eliminado = reserva_repo.eliminar(reserva_id)
+    eliminado = reserva_repositorio.eliminar(reserva_id)
     if eliminado is False:
         raise HTTPException(status_code=404, detail="Reserva no encontrada")
 
 @router.get("")
 def listar_reservas(fecha: str | None = None, ordenar_por: str | None = None, direccion: str = "asc", pagina: int = 1, limite: int = 20):
-    reservas = reserva_repo.listar()
+    reservas = reserva_repositorio.obtener_todos()
     if fecha is not None:
         reservas = [r for r in reservas if r.fecha == fecha]
 
@@ -50,9 +50,9 @@ def listar_reservas(fecha: str | None = None, ordenar_por: str | None = None, di
     reservas_pagina = reservas[inicio:fin]
 
     return {
-    "items": reservas_pagina,
-    "total": total,
-    "pagina": pagina,
-    "limite": limite,
-    "total_paginas": math.ceil(total / limite),
+        "items": reservas_pagina,
+        "total": total,
+        "pagina": pagina,
+        "limite": limite,
+        "total_paginas": math.ceil(total / limite),
     }
