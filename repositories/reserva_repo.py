@@ -12,15 +12,15 @@ class ReservaRepository:
         for reserva in self._reservas:
             if reserva.id == reserva_id:
                 return reserva
-        return
+        return None
 
-    def guardar(self, cliente_id, estacion_id, fecha, turno):
+    def guardar(self, datos):
         nueva_reserva = Reserva(
             id=self._siguiente_id,
-            cliente_id=cliente_id,
-            estacion_id=estacion_id,
-            fecha=fecha,
-            turno=turno,
+            cliente_id=datos.cliente_id,
+            estacion_id=datos.estacion_id,
+            fecha=datos.fecha,
+            turno=datos.turno,
             costo=0,
             estado=EstadoReserva.CONFIRMADA,
         )
@@ -28,10 +28,10 @@ class ReservaRepository:
         self._reservas.append(nueva_reserva)
         return nueva_reserva
 
-    def actualizar_estado(self, reserva_id, nuevo_estado):
+    def actualizar(self, reserva_id, nuevo_estado):
         reserva = self.obtener_por_id(reserva_id)
         if reserva is None:
-            return
+            return None
         reserva.estado = nuevo_estado
         return reserva
 

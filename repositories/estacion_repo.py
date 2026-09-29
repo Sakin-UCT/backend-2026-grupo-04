@@ -15,25 +15,25 @@ class EstacionRepository:
                 return estacion
         return
 
-    def guardar(self, codigo, ubicacion, categoria_id):
+    def guardar(self, datos):
         #crea una estadion nueva y la devuelve
         nueva_estacion = Estacion(
             id=self._siguiente_id,
-            codigo=codigo,
-            ubicacion=ubicacion,
-            categoria_id=categoria_id,
+            codigo=datos.codigo,
+            ubicacion=datos.ubicacion,
+            categoria_id=datos.categoria_id,
             estado=EstadoEstacion.DISPONIBLE,
         )
         self._siguiente_id += 1
         self._estaciones.append(nueva_estacion)
         return nueva_estacion
 
-    def actualizar_estado(self, estacion_id, nuevo_estado):
+    def actualizar(self, estacion_id, datos):
         #actualiza el estado y la devuelve actualizada
         estacion = self.obtener_por_id(estacion_id)
         if estacion is None:
             return
-        estacion.estado = nuevo_estado
+        estacion.estado = datos.estado
         return estacion
 
 estacion_repositorio = EstacionRepository()
