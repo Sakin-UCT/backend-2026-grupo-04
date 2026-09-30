@@ -1,0 +1,38 @@
+### 1. Crear una reserva exitosamente (200 OK)
+POST http://localhost:8000/reservas
+Content-Type: application/json
+
+{
+  "cliente_id": 1,
+  "estacion_id": 1,
+  "fecha": "2026-10-01",
+  "turno": "10:00-11:00"
+}
+
+### 2. Error 400: reserva duplicada para la misma estación, fecha y turno (RN1)
+POST http://localhost:8000/reservas
+Content-Type: application/json
+
+{
+  "cliente_id": 2,
+  "estacion_id": 1,
+  "fecha": "2026-10-01",
+  "turno": "10:00-11:00"
+}
+
+### 3. Error 400: estación en mantención o fuera de servicio (RN2)
+POST http://localhost:8000/reservas
+Content-Type: application/json
+
+{
+  "cliente_id": 1,
+  "estacion_id": 2,
+  "fecha": "2026-10-01",
+  "turno": "12:00-13:00"
+}
+
+### 4. Listar reservas con filtro, orden y paginación (200 OK)
+GET http://localhost:8000/reservas?fecha=2026-10-01&ordenar_por=costo&direccion=asc&pagina=1&limite=20
+
+### 5. Obtener una reserva por ID existente (200 OK)
+GET http://localhost:8000/reservas/1
