@@ -29,3 +29,25 @@ def _error(status_code: int, code: str, message: str, details: list | None = Non
         status_code=status_code,
         content={"error": {"code": code, "message": message, "details": details or []}},
     )
+
+@app.exception_handler(StarletteHTTPException)
+async def manejador_http_exception(request: Request, exc: StarletteHTTPException):
+    if isinstance(exc.detail, dict) and "error" in exc.detail:
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
+
+    return _error(
+        exc.status_code,
+        CODIGOS_POR_STATUS.get(exc.status_code, "ERROR"),
+        str(exc.detail),
+    )
+
+@app.exception_handler(RequestValidationError)
+async def manejador_validacion(request: Request, exc: RequestValidationError):
+    detalles = [
+        {
+            "campo": ".".join(str(parte) for parte in err["loc"]),
+            "mensaje": err["msg"],
+        }
+        for err in exc.errors()
+    ]
+    return _error(422, "VALIDATION_ERROR", "Los datos enviados no son válidos", detalles)
