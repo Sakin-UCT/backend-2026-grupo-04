@@ -1,6 +1,6 @@
 from repositories.reserva_repo import reserva_repositorio
 from repositories.estacion_repo import estacion_repositorio
-from repositories.categoria_repo import categoria_repositorio
+from repositories.categoria_repo import categoria_repo
 from services import estacion_service
 
 
@@ -20,7 +20,7 @@ def crear_reserva(datos):
         raise ValueError("Estacion ya reservada para este turno")
 
     estacion = estacion_repositorio.obtener_por_id(datos.estacion_id)
-    categoria = categoria_repositorio.obtener_por_id(estacion.categoria_id)
+    categoria = categoria_repo.obtener_por_id(estacion.categoria_id)
 
     nueva_reserva = reserva_repositorio.guardar(datos)
     nueva_reserva.costo = calcular_costo(categoria, datos.turno)
