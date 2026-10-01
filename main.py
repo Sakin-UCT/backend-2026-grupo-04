@@ -3,6 +3,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from routers import clientes, categorias, estaciones, reservas
+
 app = FastAPI(title="API Centro Gamer", version="1.0.0")
 
 app.include_router(clientes.router)
@@ -14,6 +16,7 @@ app.include_router(reservas.router)
 @app.get("/")
 def root():
     return {"mensaje": "API Centro Gamer funcionando. Ver documentación en /docs"}
+
 
 CODIGOS_POR_STATUS = {
     400: "BAD_REQUEST",
@@ -30,6 +33,7 @@ def _error(status_code: int, code: str, message: str, details: list | None = Non
         content={"error": {"code": code, "message": message, "details": details or []}},
     )
 
+
 @app.exception_handler(StarletteHTTPException)
 async def manejador_http_exception(request: Request, exc: StarletteHTTPException):
     if isinstance(exc.detail, dict) and "error" in exc.detail:
@@ -40,6 +44,7 @@ async def manejador_http_exception(request: Request, exc: StarletteHTTPException
         CODIGOS_POR_STATUS.get(exc.status_code, "ERROR"),
         str(exc.detail),
     )
+
 
 @app.exception_handler(RequestValidationError)
 async def manejador_validacion(request: Request, exc: RequestValidationError):
