@@ -1,0 +1,52 @@
+### 1. Crear una estación exitosamente (200 OK)
+POST http://localhost:8000/estaciones
+Content-Type: application/json
+
+{
+  "codigo": "PC-01",
+  "ubicacion": "Sector A - Puesto 1",
+  "categoria_id": 1
+}
+
+### 2. Error 422: categoria_id con tipo de dato incorrecto
+POST http://localhost:8000/estaciones
+Content-Type: application/json
+
+{
+  "codigo": "PC-02",
+  "ubicacion": "Sector B",
+  "categoria_id": "no-es-un-numero"
+}
+
+### 3. Listar todas las estaciones (200 OK)
+GET http://localhost:8000/estaciones
+
+### 4. Obtener una estacion por ID existente (200 OK)
+GET http://localhost:8000/estaciones/1
+
+### 5. Error 404: Obtener una estacion con ID inexistente
+GET http://localhost:8000/estaciones/999
+
+### 6. Actualizar el estado de una estacion (200 OK)
+PATCH http://localhost:8000/estaciones/1
+Content-Type: application/json
+
+{
+  "estado": "en_mantencion"
+}
+
+### 7. Error 422: estado fuera de los valores permitidos por el Enum
+PATCH http://localhost:8000/estaciones/1
+Content-Type: application/json
+
+{
+  "estado": "reparando"
+}
+
+### 8. Error 404: Actualizar el estado de una estacion inexistente
+PATCH http://localhost:8000/estaciones/999
+Content-Type: application/json
+
+{
+  "estado": "en_mantencion"
+}

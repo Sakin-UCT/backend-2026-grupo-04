@@ -35,7 +35,7 @@ requirements.txt
 | Módulo | Domain / Schema / Repo | Services / Routers |
 |---|---|---|
 | Cliente y CategoriaEstacion | Benito | Joaquin |
-| Estacion y Reserva | Persona E | Javier |
+| Estacion y Reserva | Kevin | Javier |
 
 `main.py` (conexión de routers y manejo global de errores) y este `README.md` están a cargo de quien integra el proyecto.
 

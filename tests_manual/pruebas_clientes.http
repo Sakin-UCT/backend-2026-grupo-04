@@ -1,0 +1,26 @@
+### 1. Crear un cliente exitosamente (201 Created)
+POST http://localhost:8000/clientes
+Content-Type: application/json
+
+{
+  "nombre": "Carlos Pérez",
+  "correo": "carlos.perez@example.com"
+}
+
+### 2. Error 422: Validación de longitud de nombre y formato de correo
+POST http://localhost:8000/clientes
+Content-Type: application/json
+
+{
+  "nombre": "C",
+  "correo": "correo-invalido"
+}
+
+### 3. Listar todos los clientes (200 OK)
+GET http://localhost:8000/clientes
+
+### 4. Obtener un cliente por ID existente (200 OK)
+GET http://localhost:8000/clientes/1
+
+### 5. Error 404: Obtener un cliente con ID inexistente
+GET http://localhost:8000/clientes/999

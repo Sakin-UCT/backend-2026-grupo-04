@@ -1,0 +1,25 @@
+### 1. Crear categoría de estación exitosamente (201 Created)
+POST http://localhost:8000/categorias
+Content-Type: application/json
+
+{
+  "nombre": "PC Gama Alta",
+  "tarifa_hora": 4500.0,
+  "descripcion": "Equipos con RTX y monitores 144Hz"
+}
+
+### 2. Error 422: Validación numérica (tarifa menor o igual a 0)
+POST http://localhost:8000/categorias
+Content-Type: application/json
+
+{
+  "nombre": "PC Económico",
+  "tarifa_hora": 0.0,
+  "descripcion": "Equipos básicos"
+}
+
+### 3. Listar categorías de estación (200 OK)
+GET http://localhost:8000/categorias
+
+### 4. Obtener categoría por ID existente (200 OK)
+GET http://localhost:8000/categorias/1
