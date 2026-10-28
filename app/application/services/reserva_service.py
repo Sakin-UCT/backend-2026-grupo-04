@@ -1,6 +1,6 @@
-from repositories.reserva_repo import reserva_repositorio
-from repositories.estacion_repo import estacion_repositorio
-from repositories.categoria_repo import categoria_repo
+from infrastructure.repositories.reserva_repo import reserva_repositorio
+from infrastructure.repositories.estacion_repo import estacion_repositorio
+from infrastructure.repositories.categoria_repo import categoria_repo
 from services import estacion_service
 
 
