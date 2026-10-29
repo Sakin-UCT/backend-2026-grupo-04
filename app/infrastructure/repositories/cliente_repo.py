@@ -1,49 +1,57 @@
-from typing import List, Optional
-from datetime import datetime
-from domain.cliente import Cliente  
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from models.cliente_model import ClienteModel
+from app.domain.cliente import Cliente
+from app.infrastructure.mappers import cliente_to_domain, cliente_to_model
 
 class ClienteRepository:
-    def __init__(self):
-        self._clientes: list[Cliente] = []
-        self._contador_id: int = 1
+    def __init__(self, db: Session):
+        self.db = db
 
-    def obtener_todos(self) -> List[Cliente]:
-        return self._clientes
+    def obtener_todos(self) -> list[Cliente]:
+        modelos = self.db.query(ClienteModel).all()
+        return [cliente_to_domain(m) for m in modelos]
 
-    def obtener_por_id(self, cliente_id: int) -> Optional[Cliente]:
-        for cliente in self._clientes:
-            if cliente.id == cliente_id:
-                return cliente
-        return None
+    def obtener_por_id(self, cliente_id: int) -> Cliente | None:
+        modelo = self.db.query(ClienteModel).filter(ClienteModel.id == cliente_id).first()
+        return cliente_to_domain(modelo) if modelo else None
 
-    def guardar(self, datos) -> Cliente:
-        nuevo_cliente = Cliente(
-            id=self._contador_id,
-            nombre=datos.nombre,
-            correo=datos.correo,
-            fecha_registro=datetime.now()
-        )
-        self._clientes.append(nuevo_cliente)
-        self._contador_id += 1
-        return nuevo_cliente
+    def guardar(self, cliente: Cliente) -> Cliente:
+        modelo = cliente_to_model(cliente)
+        try:
+            self.db.add(modelo)
+            self.db.commit()
+            self.db.refresh(modelo)
+            return cliente_to_domain(modelo)
+        except IntegrityError:
+            self.db.rollback()
+            raise Exception("ConflictoError: El correo ya está registrado o hay un error de integridad.")
 
-    def actualizar(self, cliente_id: int, datos) -> Optional[Cliente]:
-        cliente = self.obtener_por_id(cliente_id)
-        if not cliente:
+    def actualizar(self, cliente: Cliente) -> Cliente:
+        modelo = self.db.query(ClienteModel).filter(ClienteModel.id == cliente.id).first()
+        if not modelo:
             return None
         
-        if hasattr(datos, "nombre") and datos.nombre is not None:
-            cliente.nombre = datos.nombre
-        if hasattr(datos, "correo") and datos.correo is not None:
-            cliente.correo = datos.correo
-            
-        return cliente
+        modelo.nombre = cliente.nombre
+        modelo.correo = cliente.correo
+        modelo.telefono = cliente.telefono
+        
+        try:
+            self.db.commit()
+            self.db.refresh(modelo)
+            return cliente_to_domain(modelo)
+        except IntegrityError:
+            self.db.rollback()
+            raise Exception("ConflictoError: Error al actualizar.")
 
     def eliminar(self, cliente_id: int) -> bool:
-        cliente = self.obtener_por_id(cliente_id)
-        if cliente:
-            self._clientes.remove(cliente)
+        modelo = self.db.query(ClienteModel).filter(ClienteModel.id == cliente_id).first()
+        if not modelo:
+            return False
+        try:
+            self.db.delete(modelo)
+            self.db.commit()
             return True
-        return False
-
-cliente_repo = ClienteRepository()
+        except IntegrityError:
+            self.db.rollback()
+            raise Exception("ConflictoError: No se puede eliminar el cliente porque tiene reservas asociadas.")
