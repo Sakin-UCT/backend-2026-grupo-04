@@ -1,4 +1,4 @@
-from repositories.estacion_repo import estacion_repositorio
+from infrastructure.repositories.estacion_repo import estacion_repositorio
 
 def validar_disponibilidad_reserva(estacion_id):
     estacion = estacion_repositorio.obtener_por_id(estacion_id)
