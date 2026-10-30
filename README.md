@@ -98,4 +98,151 @@ FastAPI genera la documentación automáticamente a partir de los routers y los 
 - Esquema OpenAPI en JSON: http://localhost:8000/openapi.json
 Cada endpoint documenta su resumen, descripción y los códigos de respuesta posibles, y los schemas incluyen ejemplos.
 
+## Estructura del proyecto
 
+```
+app/
+├── main.py                  # crea la app, incluye routers y manejadores de errores
+├── presentation/            # capa de presentación (HTTP)
+│   ├── routers/
+│   ├── schemas/
+│   └── dependencies.py
+├── application/
+│   └── services/            # casos de uso y reglas de negocio
+├── domain/                  # entidades, enums y excepciones (Python puro)
+└── infrastructure/          # acceso a datos
+    ├── database.py
+    ├── models/
+    ├── mappers.py
+    ├── repositories/
+    └── seeders/
+migrations/                  # migraciones de Alembic
+tests_manual/                # pruebas manuales (.http) y su evidencia
+compose.yml                  # PostgreSQL y pgAdmin
+.env.example                 # plantilla de variables de entorno
+requirements.txt
+```
+
+## Arquitectura por capas
+ 
+Cada capa solo conoce a la que tiene debajo:
+ 
+```
+presentation → application → domain ← infrastructure
+```
+ 
+| Capa | Qué contiene | Función |
+|---|---|---|
+| **Presentación** (`app/presentation`) | Routers, schemas (DTOs) y `dependencies.py` | Recibe la solicitud HTTP, valida los datos con los schemas, llama al service y devuelve la respuesta con su código HTTP. Un router no consulta la base de datos ni contiene reglas de negocio. `get_db()` entrega una sesión de BD por solicitud y la cierra al terminar. |
+| **Aplicación** (`app/application/services`) | Services | Implementan los casos de uso y las reglas de negocio (RN1, RN2, RN3), calculan el costo y lanzan las excepciones de dominio. Reciben los repositorios en su constructor. |
+| **Dominio** (`app/domain`) | Entidades, enums y excepciones | Modelo del negocio en Python puro, sin SQLAlchemy ni FastAPI. Define `RecursoNoEncontradoError`, `ReglaNegocioError` y `ConflictoError`. |
+| **Infraestructura** (`app/infrastructure`) | `database.py`, modelos ORM, mappers, repositorios y seeders | Persistencia en PostgreSQL. Los repositorios reciben una `Session`, y reciben y devuelven entidades de dominio, convirtiéndolas con los mappers desde y hacia los modelos ORM. |
+ 
+Las excepciones de dominio las lanzan los services y `main.py` las convierte a JSON, por lo que los routers no arman `HTTPException` a mano.
+ 
+## Recorrido de una solicitud
+ 
+Una solicitud, por ejemplo `POST /reservas`, recorre estos pasos:
+ 
+1. El **router** recibe la solicitud HTTP y FastAPI valida el cuerpo con el schema (si falla, responde 422).
+2. La dependencia del router arma `Service(Repositorio(db))`, con `db` entregada por `get_db()`.
+3. El **service** aplica las reglas de negocio: consulta lo que necesita a los repositorios y, si algo no se cumple, lanza una excepción de dominio.
+4. El **repositorio** trabaja con la `Session`, y usa los **mappers** para convertir entre entidades de dominio y **modelos ORM**.
+5. **PostgreSQL** ejecuta la consulta.
+6. El resultado vuelve por el mismo camino: entidad de dominio → service → router, que lo convierte en un schema de respuesta con su código HTTP (200, 201 o 204).
+7. Si hubo una excepción, `main.py` la convierte a la respuesta de error estándar.
+<!-- Kevin reemplaza este bloque por el diagrama Mermaid del recorrido-->
+ 
+## Modelo de datos
+ 
+| Entidad | Tabla | Campos |
+|---|---|---|
+| Cliente | `clientes` | `id`, `nombre`, `correo` (único), `telefono`, `fecha_registro` |
+| CategoriaEstacion | `categorias_estacion` | `id`, `nombre`, `tarifa_hora`, `descripcion`, `plataforma` |
+| Estacion | `estaciones` | `id`, `codigo` (único), `ubicacion`, `estado`, `categoria_id` (FK) |
+| Reserva | `reservas` | `id`, `cliente_id` (FK), `estacion_id` (FK), `fecha`, `turno`, `estado`, `costo` |
+ 
+Relaciones 1:N: una categoría tiene muchas estaciones, un cliente tiene muchas reservas y una estación tiene muchas reservas.
+ 
+Los estados se guardan como texto en la base de datos y el dominio los maneja como `Enum`:
+ 
+- **Estación:** `disponible`, `en_mantencion`, `fuera_de_servicio`
+- **Reserva:** `confirmada`, `en_curso`, `completada`, `cancelada`, `no_show`
+El turno se escribe como un rango horario, por ejemplo `"10:00-11:00"`.
+ 
+## Reglas de negocio
+ 
+- **RN1:** no se puede crear una reserva si ya existe otra `confirmada` o `en_curso` para la misma estación, fecha y turno.
+- **RN2:** no se puede reservar una estación que esté `en_mantencion` o `fuera_de_servicio`.
+- **RN3:** una reserva no puede pasar a `completada` si antes no estaba `en_curso`.
+**Costo de la reserva** = `tarifa_hora` de la categoría de la estación × duración del turno en horas.
+ 
+## Contrato REST
+ 
+<!--Kevin pega aquí la tabla del contrato rest-->
+ 
+### Códigos HTTP
+ 
+| Código | Cuándo se usa |
+|---|---|
+| 200 | Consulta o actualización exitosa |
+| 201 | Creación exitosa (todos los `POST`) |
+| 204 | Eliminación exitosa (`DELETE`), sin cuerpo |
+| 400 | Se viola una regla de negocio (RN2, RN3) |
+| 404 | El recurso no existe |
+| 409 | Conflicto: RN1, correo duplicado, o eliminar un recurso con dependientes |
+| 422 | Datos de entrada inválidos |
+| 500 | Error interno del servidor |
+ 
+### Formato de error
+ 
+Todas las respuestas de error usan la misma estructura:
+ 
+```json
+{
+  "error": {
+    "code": "RESOURCE_NOT_FOUND",
+    "message": "mensaje descriptivo",
+    "details": []
+  }
+}
+```
+ 
+| Código (`code`) | HTTP | Origen |
+|---|---|---|
+| `RESOURCE_NOT_FOUND` | 404 | `RecursoNoEncontradoError` |
+| `BUSINESS_RULE_VIOLATION` | 400 | `ReglaNegocioError` |
+| `CONFLICT` | 409 | `ConflictoError` |
+| `VALIDATION_ERROR` | 422 | Validación de Pydantic; `details` trae el campo y el mensaje de cada error |
+| `INTERNAL_ERROR` | 500 | Cualquier error no controlado (el detalle solo queda en el log del servidor) |
+ 
+## Pruebas
+ 
+Las pruebas son manuales y están en la carpeta `tests_manual/`, un archivo `.http` por recurso (`pruebas_clientes.http`, `pruebas_categorias.http`, `pruebas_estaciones.http`, `pruebas_reservas.http`). Para ejecutarlas:
+ 
+1. Levanta todo como en la sección **Ejecución** (con la base migrada y con datos).
+2. Abre el archivo `.http` en VS Code con la extensión **REST Client** y pulsa *Send Request* sobre cada petición. También puedes probar los mismos endpoints desde `/docs`.
+3. Compara cada respuesta con el código esperado.
+Los resultados quedan registrados en `tests_manual/evidencia_pruebas.md`.
+ 
+## Alcance
+ 
+- No hay autenticación.
+- No hay pagos ni notificaciones automáticas (fuera de alcance).
+## Integrantes y responsabilidades
+
+| Integrante | Responsabilidad |
+|---|---|
+| Javier | Estructura por capas del proyecto; services y routers de Estación y Reserva |
+| Benito | `database.py`, Alembic y modelos de Cliente y Categoría; repositorios de Cliente y Categoría; migración inicial |
+| Kevin | Modelos de Estación y Reserva; repositorios de Estación y Reserva; diagramas y tabla del contrato REST |
+| Joaquin | Services y routers de Cliente y Categoría |
+| Joako | Seeders y pruebas |
+| Sakin | Coordinación y seguimiento; integración técnica (`main.py`, `dependencies.py`, `compose.yml`, `.env.example`, `.gitignore`, `requirements.txt`) y README |
+ 
+### Flujo de trabajo en Git
+ 
+- Cada integrante trabaja en su rama personal y no hace push directo a `main`.
+- Mínimo 5 commits propios con mensajes descriptivos ("Agrega ...", "Corrige ...") y 1 pull request a `main`.
+- Los pull requests se fusionan en orden y los conflictos se resuelven antes de fusionar.
+- El archivo `.env` nunca se sube.
