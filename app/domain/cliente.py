@@ -1,8 +1,11 @@
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
 
+@dataclass(kw_only=True)
 class Cliente:
-    def __init__(self, id: int, nombre: str, correo: str, fecha_registro: datetime):
-        self.id = id
-        self.nombre = nombre
-        self.correo = correo
-        self.fecha_registro = fecha_registro
+    id: Optional[int] = None
+    nombre: str
+    correo: str
+    telefono: Optional[str] = None
+    fecha_registro: Optional[datetime] = None

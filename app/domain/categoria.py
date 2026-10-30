@@ -1,6 +1,10 @@
-class CategoriaEstacion:
-    def __init__(self, id: int, nombre: str, tarifa_hora: float, descripcion: str = None):
-        self.id = id
-        self.nombre = nombre
-        self.tarifa_hora = tarifa_hora
-        self.descripcion = descripcion
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass(kw_only=True)
+class Categoria:
+    id: Optional[int] = None
+    nombre: str
+    tarifa_hora: float
+    descripcion: Optional[str] = None
+    plataforma: Optional[str] = None
