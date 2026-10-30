@@ -1,26 +1,115 @@
-### 1. Crear un cliente exitosamente (201 Created)
-POST http://localhost:8000/clientes
+@baseUrl = http://127.0.0.1:8000
+
+### ============================================================================
+### 1. LISTAR CLIENTES (Verifica clientes iniciales del seed: IDs 1 y 2)
+### Esperado: 200 OK
+### ============================================================================
+GET {{baseUrl}}/clientes/
+Accept: application/json
+
+
+### ============================================================================
+### 2. OBTENER CLIENTE POR ID EXISTENTE (Del seed)
+### Esperado: 200 OK (Cliente ID 1: benito@gamer.cl)
+### ============================================================================
+GET {{baseUrl}}/clientes/1
+Accept: application/json
+
+
+### ============================================================================
+### 3. OBTENER CLIENTE INEXISTENTE
+### Esperado: 404 Not Found (RESOURCE_NOT_FOUND)
+### ============================================================================
+GET {{baseUrl}}/clientes/999
+Accept: application/json
+
+
+### ============================================================================
+### 4. CREAR CLIENTE VÁLIDO (Sin reservas, se creará con ID 3)
+### Esperado: 201 Created
+### ============================================================================
+POST {{baseUrl}}/clientes/
 Content-Type: application/json
 
 {
-  "nombre": "Carlos Pérez",
-  "correo": "carlos.perez@example.com"
+  "nombre": "Camila Soto",
+  "correo": "camila.soto@gamer.cl",
+  "telefono": "+56955556666"
 }
 
-### 2. Error 422: Validación de longitud de nombre y formato de correo
-POST http://localhost:8000/clientes
+
+### ============================================================================
+### 5. CREAR CLIENTE CON CORREO DUPLICADO (Ya existe en el seed: benito@gamer.cl)
+### Esperado: 409 Conflict (CONFLICT)
+### ============================================================================
+POST {{baseUrl}}/clientes/
 Content-Type: application/json
 
 {
-  "nombre": "C",
-  "correo": "correo-invalido"
+  "nombre": "Otro Benito",
+  "correo": "benito@gamer.cl",
+  "telefono": "+56999998888"
 }
 
-### 3. Listar todos los clientes (200 OK)
-GET http://localhost:8000/clientes
 
-### 4. Obtener un cliente por ID existente (200 OK)
-GET http://localhost:8000/clientes/1
+### ============================================================================
+### 6. CREAR CLIENTE CON DATOS INVÁLIDOS (Nombre de 1 letra y correo sin formato)
+### Esperado: 422 Unprocessable Entity (VALIDATION_ERROR)
+### ============================================================================
+POST {{baseUrl}}/clientes/
+Content-Type: application/json
 
-### 5. Error 404: Obtener un cliente con ID inexistente
-GET http://localhost:8000/clientes/999
+{
+  "nombre": "J",
+  "correo": "correo-invalido-sin-arroba",
+  "telefono": "+56912345678"
+}
+
+
+### ============================================================================
+### 7. ACTUALIZAR CLIENTE EXISTENTE (Actualiza el cliente ID 3 recién creado)
+### Esperado: 200 OK
+### ============================================================================
+PUT {{baseUrl}}/clientes/3
+Content-Type: application/json
+
+{
+  "nombre": "Camila Soto Actualizada",
+  "correo": "camila.actualizada@gamer.cl",
+  "telefono": "+56977778888"
+}
+
+
+### ============================================================================
+### 8. ACTUALIZAR CLIENTE INEXISTENTE
+### Esperado: 404 Not Found (RESOURCE_NOT_FOUND)
+### ============================================================================
+PUT {{baseUrl}}/clientes/999
+Content-Type: application/json
+
+{
+  "nombre": "Fantasma",
+  "correo": "fantasma@gamer.cl",
+  "telefono": "+56900000000"
+}
+
+
+### ============================================================================
+### 9. ELIMINAR CLIENTE CON RESERVAS ASOCIADAS (Cliente ID 1 tiene Reserva ID 1 en seed)
+### Esperado: 409 Conflict (CONFLICT - No se puede borrar porque tiene reservas)
+### ============================================================================
+DELETE {{baseUrl}}/clientes/1
+
+
+### ============================================================================
+### 10. ELIMINAR CLIENTE SIN RESERVAS (Elimina el cliente ID 3 creado en el paso 4)
+### Esperado: 204 No Content
+### ============================================================================
+DELETE {{baseUrl}}/clientes/3
+
+
+### ============================================================================
+### 11. ELIMINAR CLIENTE INEXISTENTE
+### Esperado: 404 Not Found (RESOURCE_NOT_FOUND)
+### ============================================================================
+DELETE {{baseUrl}}/clientes/999
