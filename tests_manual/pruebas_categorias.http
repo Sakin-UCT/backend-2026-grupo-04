@@ -1,25 +1,69 @@
-### 1. Crear categoría de estación exitosamente (201 Created)
-POST http://localhost:8000/categorias
+@baseUrl = http://127.0.0.1:8000
+
+### ============================================================================
+### 1. LISTAR CATEGORÍAS (Verifica datos iniciales del seed: IDs 1 y 2)
+### Esperado: 200 OK (Lista con "PC Gama Alta" y "PS5")
+### ============================================================================
+GET {{baseUrl}}/categorias/
+Accept: application/json
+
+
+### ============================================================================
+### 2. OBTENER CATEGORÍA POR ID EXISTENTE (Creada por seed.py)
+### Esperado: 200 OK (Categoría ID 1 - "PC Gama Alta", tarifa_hora: 4500.0)
+### ============================================================================
+GET {{baseUrl}}/categorias/1
+Accept: application/json
+
+
+### ============================================================================
+### 3. OBTENER CATEGORÍA INEXISTENTE
+### Esperado: 404 Not Found (RESOURCE_NOT_FOUND)
+### ============================================================================
+GET {{baseUrl}}/categorias/999
+Accept: application/json
+
+
+### ============================================================================
+### 4. CREAR UNA NUEVA CATEGORÍA VÁLIDA (También sirve para prueba de persistencia)
+### Esperado: 201 Created (Retorna la categoría creada con ID 3)
+### ============================================================================
+POST {{baseUrl}}/categorias/
+Content-Type: application/json
+
+{
+  "nombre": "Simulador Racing VR",
+  "tarifa_hora": 6000.0,
+  "descripcion": "Cockpit con volante Direct Drive, pedales Load Cell y visor VR",
+  "plataforma": "Simulador"
+}
+
+
+### ============================================================================
+### 5. CREAR CATEGORÍA CON NOMBRE DUPLICADO (Conflicto con ID 1 del seed)
+### Esperado: 409 Conflict (CONFLICT)
+### ============================================================================
+POST {{baseUrl}}/categorias/
 Content-Type: application/json
 
 {
   "nombre": "PC Gama Alta",
   "tarifa_hora": 4500.0,
-  "descripcion": "Equipos con RTX y monitores 144Hz"
+  "descripcion": "Intento de duplicar categoría existente",
+  "plataforma": "PC"
 }
 
-### 2. Error 422: Validación numérica (tarifa menor o igual a 0)
-POST http://localhost:8000/categorias
+
+### ============================================================================
+### 6. CREAR CATEGORÍA CON DATOS INVÁLIDOS (nombre muy corto y tarifa <= 0)
+### Esperado: 422 Unprocessable Entity (VALIDATION_ERROR)
+### ============================================================================
+POST {{baseUrl}}/categorias/
 Content-Type: application/json
 
 {
-  "nombre": "PC Económico",
-  "tarifa_hora": 0.0,
-  "descripcion": "Equipos básicos"
+  "nombre": "A",
+  "tarifa_hora": -1500.0,
+  "descripcion": "Tarifa negativa y nombre de 1 caracter",
+  "plataforma": "PC"
 }
-
-### 3. Listar categorías de estación (200 OK)
-GET http://localhost:8000/categorias
-
-### 4. Obtener categoría por ID existente (200 OK)
-GET http://localhost:8000/categorias/1
