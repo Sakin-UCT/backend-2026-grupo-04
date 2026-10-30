@@ -1,61 +1,204 @@
-# API Centro Gamer
+  # API Centro Gamer
 
-API REST en Python + FastAPI para un centro gamer: permite gestionar clientes y estaciones de juego, y reservar estaciones por turno.
+API REST en Python + FastAPI para un centro gamer: permite gestionar clientes y estaciones de juego, y reservar estaciones por turno.Los datos se guardan en PostgreSQL y el esquema se crea y versiona con Alembic.
 
-Proyecto del curso Desarrollo de Backend (ICINF1108).
+Proyecto del curso Desarrollo de Backend (ICINF1108), UCT. Grupo 04.
 
-## Cómo correr el proyecto (con uv)
-
-bash
-uv venv
+## Tecnologías
+ 
+Python, FastAPI, Pydantic v2, SQLAlchemy, Alembic, PostgreSQL (en Docker) y pgAdmin.
+ 
+## Requisitos previos
+ 
+- Python 3.11 o superior
+- Docker y Docker Compose
+- Git
+## Instalación
+ 
+```bash
+git clone https://github.com/Sakin-UCT/backend-2026-grupo-04.git
+cd backend-2026-grupo-04
+ 
+python -m venv .venv
 source .venv/bin/activate        # Linux / Mac
 # .venv\Scripts\activate         # Windows
-uv pip install -r requirements.txt
-uv run uvicorn main:app --reload
+ 
+pip install -r requirements.txt
+```
+## Variables de entorno
 
+```bash
+cp .env.example .env
+```
+ 
+| Variable | Para qué sirve | Valor de ejemplo |
+|---|---|---|
+| `POSTGRES_USER` | Usuario de PostgreSQL | `gamer` |
+| `POSTGRES_PASSWORD` | Clave de PostgreSQL (cámbiala) | `cambiar_esta_clave` |
+| `POSTGRES_DB` | Nombre de la base de datos | `centro_gamer` |
+| `POSTGRES_PORT` | Puerto de PostgreSQL en tu máquina | `5432` |
+| `PGADMIN_DEFAULT_EMAIL` | Correo de acceso a pgAdmin | `admin@example.com` |
+| `PGADMIN_DEFAULT_PASSWORD` | Clave de acceso a pgAdmin (cámbiala) | `cambiar_esta_clave` |
+| `PGADMIN_PORT` | Puerto de pgAdmin en tu máquina | `5050` |
+| `DATABASE_URL` | URL de conexión que usan la app y Alembic | `postgresql+psycopg2://gamer:cambiar_esta_clave@localhost:5432/centro_gamer` |
 
-Documentación interactiva: http://localhost:8000/docs
+`DATABASE_URL` debe coincidir con las variables `POSTGRES_*`: si cambias usuario, clave, base o puerto, actualízala también.
+ 
+## Configuración de la base de datos
+ 
+PostgreSQL y pgAdmin corren con Docker Compose:
+
+```bash
+docker compose up -d
+```
+ 
+Espera unos segundos a que PostgreSQL termine de iniciar. pgAdmin queda en http://localhost:5050 (usa el correo y la clave de tu `.env`). Para conectarlo al servidor, usa como host `postgres_db`, puerto `5432`, y el usuario, clave y base de tu `.env`.
+ 
+Para borrar todo y empezar de cero:
+
+```bash
+docker compose down -v
+```
+## Migraciones y seeders
+ 
+El esquema de la base de datos se crea **solo con Alembic**. No se usa `Base.metadata.create_all`.
+ 
+```bash
+alembic upgrade head                      # crea las tablas
+python -m app.infrastructure.seeders.seed # carga datos de ejemplo
+```
+ 
+Si cambias un modelo ORM, genera una nueva migración y revísala antes de aplicarla:
+ 
+```bash
+alembic revision --autogenerate -m "Describe el cambio"
+alembic upgrade head
+```
+ 
+## Ejecución
+
+Orden completo desde un clon limpio:
+ 
+```bash
+cp .env.example .env
+docker compose up -d
+alembic upgrade head
+python -m app.infrastructure.seeders.seed
+uvicorn app.main:app --reload
+```
+
+La API queda en http://localhost:8000.
+
+## Documentación OpenAPI
+ 
+FastAPI genera la documentación automáticamente a partir de los routers y los schemas:
+ 
+- Swagger UI (interactiva): http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+- Esquema OpenAPI en JSON: http://localhost:8000/openapi.json
+Cada endpoint documenta su resumen, descripción y los códigos de respuesta posibles, y los schemas incluyen ejemplos.
 
 ## Estructura del proyecto
 
-
-domain/
-schemas/
-repositories/
-services/
-routers/
-tests_manual/
-main.py
-README.md
+```
+app/
+├── main.py                  # crea la app, incluye routers y manejadores de errores
+├── presentation/            # capa de presentación (HTTP)
+│   ├── routers/
+│   ├── schemas/
+│   └── dependencies.py
+├── application/
+│   └── services/            # casos de uso y reglas de negocio
+├── domain/                  # entidades, enums y excepciones (Python puro)
+└── infrastructure/          # acceso a datos
+    ├── database.py
+    ├── models/
+    ├── mappers.py
+    ├── repositories/
+    └── seeders/
+migrations/                  # migraciones de Alembic
+tests_manual/                # pruebas manuales (.http) y su evidencia
+compose.yml                  # PostgreSQL y pgAdmin
+.env.example                 # plantilla de variables de entorno
 requirements.txt
-.gitignore
+```
 
-## Módulos y responsables
-
-| Módulo | Domain / Schema / Repo | Services / Routers |
+## Arquitectura por capas
+ 
+Cada capa solo conoce a la que tiene debajo:
+ 
+```
+presentation → application → domain ← infrastructure
+```
+ 
+| Capa | Qué contiene | Función |
 |---|---|---|
-| Cliente y CategoriaEstacion | Benito | Joaquin |
-| Estacion y Reserva | Kevin | Javier |
-
-`main.py` (conexión de routers y manejo global de errores) y este `README.md` están a cargo de quien integra el proyecto.
-
+| **Presentación** (`app/presentation`) | Routers, schemas (DTOs) y `dependencies.py` | Recibe la solicitud HTTP, valida los datos con los schemas, llama al service y devuelve la respuesta con su código HTTP. Un router no consulta la base de datos ni contiene reglas de negocio. `get_db()` entrega una sesión de BD por solicitud y la cierra al terminar. |
+| **Aplicación** (`app/application/services`) | Services | Implementan los casos de uso y las reglas de negocio (RN1, RN2, RN3), calculan el costo y lanzan las excepciones de dominio. Reciben los repositorios en su constructor. |
+| **Dominio** (`app/domain`) | Entidades, enums y excepciones | Modelo del negocio en Python puro, sin SQLAlchemy ni FastAPI. Define `RecursoNoEncontradoError`, `ReglaNegocioError` y `ConflictoError`. |
+| **Infraestructura** (`app/infrastructure`) | `database.py`, modelos ORM, mappers, repositorios y seeders | Persistencia en PostgreSQL. Los repositorios reciben una `Session`, y reciben y devuelven entidades de dominio, convirtiéndolas con los mappers desde y hacia los modelos ORM. |
+ 
+Las excepciones de dominio las lanzan los services y `main.py` las convierte a JSON, por lo que los routers no arman `HTTPException` a mano.
+ 
+## Recorrido de una solicitud
+ 
+Una solicitud, por ejemplo `POST /reservas`, recorre estos pasos:
+ 
+1. El **router** recibe la solicitud HTTP y FastAPI valida el cuerpo con el schema (si falla, responde 422).
+2. La dependencia del router arma `Service(Repositorio(db))`, con `db` entregada por `get_db()`.
+3. El **service** aplica las reglas de negocio: consulta lo que necesita a los repositorios y, si algo no se cumple, lanza una excepción de dominio.
+4. El **repositorio** trabaja con la `Session`, y usa los **mappers** para convertir entre entidades de dominio y **modelos ORM**.
+5. **PostgreSQL** ejecuta la consulta.
+6. El resultado vuelve por el mismo camino: entidad de dominio → service → router, que lo convierte en un schema de respuesta con su código HTTP (200, 201 o 204).
+7. Si hubo una excepción, `main.py` la convierte a la respuesta de error estándar.
+<!-- Kevin reemplaza este bloque por el diagrama Mermaid del recorrido-->
+ 
+## Modelo de datos
+ 
+| Entidad | Tabla | Campos |
+|---|---|---|
+| Cliente | `clientes` | `id`, `nombre`, `correo` (único), `telefono`, `fecha_registro` |
+| CategoriaEstacion | `categorias_estacion` | `id`, `nombre`, `tarifa_hora`, `descripcion`, `plataforma` |
+| Estacion | `estaciones` | `id`, `codigo` (único), `ubicacion`, `estado`, `categoria_id` (FK) |
+| Reserva | `reservas` | `id`, `cliente_id` (FK), `estacion_id` (FK), `fecha`, `turno`, `estado`, `costo` |
+ 
+Relaciones 1:N: una categoría tiene muchas estaciones, un cliente tiene muchas reservas y una estación tiene muchas reservas.
+ 
+Los estados se guardan como texto en la base de datos y el dominio los maneja como `Enum`:
+ 
+- **Estación:** `disponible`, `en_mantencion`, `fuera_de_servicio`
+- **Reserva:** `confirmada`, `en_curso`, `completada`, `cancelada`, `no_show`
+El turno se escribe como un rango horario, por ejemplo `"10:00-11:00"`.
+ 
 ## Reglas de negocio
-
-- **RN1:** no se puede reservar la misma estación en el mismo turno y fecha si ya existe una reserva `confirmada` o `en_curso`.
-- **RN2:** no se puede reservar una estación que esté en `mantencion` o `fuera_de_servicio`.
-- **RN3:** una reserva no puede pasar a `completada` sin haber pasado antes por `en_curso`.
-
-## Alcance
-
-- No hay autenticación.
-- No hay base de datos real: todo se guarda en memoria y **se reinicia al reiniciar el servidor**.
-- No hay pagos ni notificaciones automáticas (fuera de alcance).
-
-## Formato de error estándar
-
-Todas las respuestas de error de la API usan la misma estructura, definida en un manejador global en `main.py`:
-
-json
+ 
+- **RN1:** no se puede crear una reserva si ya existe otra `confirmada` o `en_curso` para la misma estación, fecha y turno.
+- **RN2:** no se puede reservar una estación que esté `en_mantencion` o `fuera_de_servicio`.
+- **RN3:** una reserva no puede pasar a `completada` si antes no estaba `en_curso`.
+**Costo de la reserva** = `tarifa_hora` de la categoría de la estación × duración del turno en horas.
+ 
+## Contrato REST
+ 
+<!--Kevin pega aquí la tabla del contrato rest-->
+ 
+### Códigos HTTP
+ 
+| Código | Cuándo se usa |
+|---|---|
+| 200 | Consulta o actualización exitosa |
+| 201 | Creación exitosa (todos los `POST`) |
+| 204 | Eliminación exitosa (`DELETE`), sin cuerpo |
+| 400 | Se viola una regla de negocio (RN2, RN3) |
+| 404 | El recurso no existe |
+| 409 | Conflicto: RN1, correo duplicado, o eliminar un recurso con dependientes |
+| 422 | Datos de entrada inválidos |
+| 500 | Error interno del servidor |
+ 
+### Formato de error
+ 
+Todas las respuestas de error usan la misma estructura:
+ 
+```json
 {
   "error": {
     "code": "RESOURCE_NOT_FOUND",
@@ -63,6 +206,43 @@ json
     "details": []
   }
 }
+```
+ 
+| Código (`code`) | HTTP | Origen |
+|---|---|---|
+| `RESOURCE_NOT_FOUND` | 404 | `RecursoNoEncontradoError` |
+| `BUSINESS_RULE_VIOLATION` | 400 | `ReglaNegocioError` |
+| `CONFLICT` | 409 | `ConflictoError` |
+| `VALIDATION_ERROR` | 422 | Validación de Pydantic; `details` trae el campo y el mensaje de cada error |
+| `INTERNAL_ERROR` | 500 | Cualquier error no controlado (el detalle solo queda en el log del servidor) |
+ 
+## Pruebas
+ 
+Las pruebas son manuales y están en la carpeta `tests_manual/`, un archivo `.http` por recurso (`pruebas_clientes.http`, `pruebas_categorias.http`, `pruebas_estaciones.http`, `pruebas_reservas.http`). Para ejecutarlas:
+ 
+1. Levanta todo como en la sección **Ejecución** (con la base migrada y con datos).
+2. Abre el archivo `.http` en VS Code con la extensión **REST Client** y pulsa *Send Request* sobre cada petición. También puedes probar los mismos endpoints desde `/docs`.
+3. Compara cada respuesta con el código esperado.
+Los resultados quedan registrados en `tests_manual/evidencia_pruebas.md`.
+ 
+## Alcance
+ 
+- No hay autenticación.
+- No hay pagos ni notificaciones automáticas (fuera de alcance).
+## Integrantes y responsabilidades
 
-
-Si un `HTTPException` se lanza con `detail` como texto simple, el manejador lo convierte automáticamente a este formato. Los errores de validación (422) también lo usan, con `code: "VALIDATION_ERROR"` y el detalle por campo en `details`.
+| Integrante | Responsabilidad |
+|---|---|
+| Javier | Estructura por capas del proyecto; services y routers de Estación y Reserva |
+| Benito | `database.py`, Alembic y modelos de Cliente y Categoría; repositorios de Cliente y Categoría; migración inicial |
+| Kevin | Modelos de Estación y Reserva; repositorios de Estación y Reserva; diagramas y tabla del contrato REST |
+| Joaquin | Services y routers de Cliente y Categoría |
+| Joako | Seeders y pruebas |
+| Sakin | Coordinación y seguimiento; integración técnica (`main.py`, `dependencies.py`, `compose.yml`, `.env.example`, `.gitignore`, `requirements.txt`) y README |
+ 
+### Flujo de trabajo en Git
+ 
+- Cada integrante trabaja en su rama personal y no hace push directo a `main`.
+- Mínimo 5 commits propios con mensajes descriptivos ("Agrega ...", "Corrige ...") y 1 pull request a `main`.
+- Los pull requests se fusionan en orden y los conflictos se resuelven antes de fusionar.
+- El archivo `.env` nunca se sube.
