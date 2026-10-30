@@ -1,7 +1,12 @@
 from app.domain.cliente import Cliente
 from app.domain.categoria import Categoria
-from models.cliente_model import ClienteModel
-from models.categoria_model import CategoriaModel
+from app.infrastructure.models.cliente_model import ClienteModel
+from app.infrastructure.models.categoria_model import CategoriaModel
+
+from app.domain.estacion import Estacion, EstadoEstacion
+from app.domain.reserva import Reserva, EstadoReserva
+from app.infrastructure.models.estacion_model import EstacionModel
+from app.infrastructure.models.reserva_model import ReservaModel
 
 def cliente_to_domain(model: ClienteModel) -> Cliente:
     if not model:
