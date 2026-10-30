@@ -25,4 +25,20 @@ class EstacionService:
         return estacion
 
     def crear(self, datos):
-        pass  # parte para tu, kevin
+        categoria = self.categoria_repo.obtener_por_id(datos.categoria_id)
+        if categoria is None:
+            raise RecursoNoEncontradoError(f"No existe la categoria con el ID: {datos.categoria_id}")
+        estacion = Estacion(
+            codigo = datos.codigo,
+            ubicacion = datos.ubicacion,
+            categoria_id = datos.categoria_id
+        )
+        return self.estacion_repo.guardar(estacion)
+
+    def listar(self):
+        return self.estacion_repo.obtener_todos()
+
+    def cambiar_estado(self, estacion_id: int, nuevo_estado):
+        estacion = self.obtener(estacion_id)
+        estacion.estado = nuevo_estado
+        return self.estacion_repo.actualizar(estacion)
