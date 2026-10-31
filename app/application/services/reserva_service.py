@@ -1,15 +1,20 @@
-from infrastructure.repositories.reserva_repo import reserva_repositorio
-from infrastructure.repositories.estacion_repo import estacion_repositorio
-from infrastructure.repositories.categoria_repo import categoria_repo
-from services import estacion_service
+import math
+from app.domain.reserva import Reserva, EstadoReserva
+from app.domain.excepciones import RecursoNoEncontradoError, ReglaNegocioError, ConflictoError
 
+class ReservaService:
+    def __init__(self, reserva_repo, estacion_service, cliente_repo, categoria_repo):
+        self.reserva_repo = reserva_repo
+        self.estacion_service = estacion_service
+        self.cliente_repo = cliente_repo
+        self.categoria_repo = categoria_repo
 
-def calcular_costo(categoria, turno):
-    hora_inicio, hora_fin = turno.split("-")
-    h_inicio, m_inicio = map(int, hora_inicio.split(":"))
-    h_fin, m_fin = map(int, hora_fin.split(":"))
-    duracion_horas = (h_fin + m_fin / 60) - (h_inicio + m_inicio / 60)
-    return categoria.tarifa_hora * duracion_horas
+    def calcular_costo(categoria, turno):
+        hora_inicio, hora_fin = turno.split("-")
+        h_inicio, m_inicio = map(int, hora_inicio.split(":"))
+        h_fin, m_fin = map(int, hora_fin.split(":"))
+        duracion_horas = (h_fin + m_fin / 60) - (h_inicio + m_inicio / 60)
+        return categoria.tarifa_hora * duracion_horas
 
 
 def crear_reserva(datos):
