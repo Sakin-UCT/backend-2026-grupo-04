@@ -151,7 +151,70 @@ Una solicitud, por ejemplo `POST /reservas`, recorre estos pasos:
 5. **PostgreSQL** ejecuta la consulta.
 6. El resultado vuelve por el mismo camino: entidad de dominio → service → router, que lo convierte en un schema de respuesta con su código HTTP (200, 201 o 204).
 7. Si hubo una excepción, `main.py` la convierte a la respuesta de error estándar.
-<!-- Kevin reemplaza este bloque por el diagrama Mermaid del recorrido-->
+Diagrama del recorrido (router → service → repositorio → BD):
+
+```mermaid
+flowchart TD
+    cliente(["Cliente HTTP o /docs"])
+
+    subgraph PRES["presentation"]
+        router["Router (FastAPI)<br/>recibe HTTP, valida el DTO y llama al service"]
+    end
+    subgraph APP["application"]
+        service["Service<br/>reglas de negocio (RN1, RN2, RN3) y costo"]
+    end
+    subgraph DOM["domain"]
+        entidad["Entidades y excepciones<br/>Python puro"]
+    end
+    subgraph INFRA["infrastructure"]
+        repo["Repository<br/>consultas con Session"]
+        mapper["Mapper<br/>entidad a modelo y modelo a entidad"]
+        modelo["Modelo ORM (SQLAlchemy)"]
+    end
+    bd[("PostgreSQL")]
+
+    cliente -->|"JSON"| router
+    router -->|"DTO"| service
+    service -->|"entidad"| repo
+    service -.->|"usa"| entidad
+    repo --> mapper
+    mapper --> modelo
+    modelo --> bd
+```
+
+Ejemplo concreto, `POST /reservas`:
+
+```mermaid
+sequenceDiagram
+    actor C as Cliente
+    participant R as Router reservas
+    participant S as ReservaService
+    participant ER as EstacionRepository
+    participant RR as ReservaRepository
+    participant DB as PostgreSQL
+
+    C->>R: POST /reservas (JSON)
+    R->>R: valida ReservaCreate (422 si es inválido)
+    Note over R: Depends(get_db) arma el Service con sus repositorios
+    R->>S: crear_reserva(datos)
+    S->>ER: obtener_por_id(estacion_id)
+    ER->>DB: SELECT estaciones
+    DB-->>ER: fila
+    ER-->>S: Estacion (entidad)
+    Note over S: RN2: si no está disponible, ReglaNegocioError (400)
+    S->>RR: existe_conflicto(estacion_id, fecha, turno)
+    RR->>DB: SELECT EXISTS reservas activas
+    DB-->>RR: true o false
+    RR-->>S: bool
+    Note over S: RN1: si hay conflicto, ConflictoError (409)
+    Note over S: costo = tarifa_hora x horas del turno
+    S->>RR: guardar(Reserva)
+    RR->>DB: INSERT reservas
+    DB-->>RR: fila con id
+    RR-->>S: Reserva (entidad con id)
+    S-->>R: Reserva
+    R-->>C: 201 + ReservaResponse
+```
  
 ## Modelo de datos
  
@@ -170,6 +233,104 @@ Los estados se guardan como texto en la base de datos y el dominio los maneja co
 - **Reserva:** `confirmada`, `en_curso`, `completada`, `cancelada`, `no_show`
 El turno se escribe como un rango horario, por ejemplo `"10:00-11:00"`.
  
+### Diagrama de datos
+
+```mermaid
+erDiagram
+    CATEGORIAS_ESTACION ||--o{ ESTACIONES : "clasifica"
+    CLIENTES ||--o{ RESERVAS : "realiza"
+    ESTACIONES ||--o{ RESERVAS : "es reservada en"
+
+    CLIENTES {
+        int id PK
+        string nombre
+        string correo UK
+        string telefono
+        datetime fecha_registro
+    }
+    CATEGORIAS_ESTACION {
+        int id PK
+        string nombre UK
+        float tarifa_hora
+        string descripcion
+        string plataforma
+    }
+    ESTACIONES {
+        int id PK
+        string codigo UK
+        string ubicacion
+        string estado "disponible por defecto"
+        int categoria_id FK
+    }
+    RESERVAS {
+        int id PK
+        int cliente_id FK
+        int estacion_id FK
+        date fecha
+        string turno "formato HH:MM-HH:MM"
+        string estado
+        float costo
+    }
+```
+
+Un índice único parcial sobre `reservas` (`estacion_id`, `fecha`, `turno`, solo para `confirmada` y `en_curso`) respalda la regla RN1 desde la propia base de datos.
+
+### Diagrama de clases (dominio)
+
+```mermaid
+classDiagram
+    class EstadoEstacion {
+        <<enumeration>>
+        DISPONIBLE
+        EN_MANTENCION
+        FUERA_DE_SERVICIO
+    }
+    class EstadoReserva {
+        <<enumeration>>
+        CONFIRMADA
+        EN_CURSO
+        COMPLETADA
+        CANCELADA
+        NO_SHOW
+    }
+    class Cliente {
+        +int id
+        +str nombre
+        +str correo
+        +str telefono
+        +datetime fecha_registro
+    }
+    class Categoria {
+        +int id
+        +str nombre
+        +float tarifa_hora
+        +str descripcion
+        +str plataforma
+    }
+    class Estacion {
+        +int id
+        +str codigo
+        +str ubicacion
+        +EstadoEstacion estado
+        +int categoria_id
+    }
+    class Reserva {
+        +int id
+        +int cliente_id
+        +int estacion_id
+        +date fecha
+        +str turno
+        +EstadoReserva estado
+        +float costo
+    }
+
+    Categoria "1" --> "0..*" Estacion : clasifica
+    Cliente "1" --> "0..*" Reserva : realiza
+    Estacion "1" --> "0..*" Reserva : es reservada en
+    Estacion ..> EstadoEstacion : estado
+    Reserva ..> EstadoReserva : estado
+```
+
 ## Reglas de negocio
  
 - **RN1:** no se puede crear una reserva si ya existe otra `confirmada` o `en_curso` para la misma estación, fecha y turno.
@@ -179,7 +340,25 @@ El turno se escribe como un rango horario, por ejemplo `"10:00-11:00"`.
  
 ## Contrato REST
  
-<!--Kevin pega aquí la tabla del contrato rest-->
+| # | Método | Ruta | Descripción | Códigos |
+|---|--------|------|-------------|---------|
+| 1 | POST | `/clientes` | Crea un cliente | 201, 409 (correo duplicado), 422 |
+| 2 | GET | `/clientes` | Lista los clientes | 200 |
+| 3 | GET | `/clientes/{cliente_id}` | Obtiene un cliente por id | 200, 404, 422 |
+| 4 | PATCH | `/clientes/{cliente_id}` | Actualiza los datos de un cliente | 200, 404, 409 (correo duplicado), 422 |
+| 5 | DELETE | `/clientes/{cliente_id}` | Elimina un cliente | 204, 404, 409 (tiene reservas) |
+| 6 | POST | `/categorias` | Crea una categoría de estación | 201, 409 (nombre duplicado), 422 |
+| 7 | GET | `/categorias` | Lista las categorías | 200 |
+| 8 | GET | `/categorias/{categoria_id}` | Obtiene una categoría por id | 200, 404, 422 |
+| 9 | POST | `/estaciones` | Crea una estación (nace `disponible`) | 201, 404 (categoría no existe), 409 (código duplicado), 422 |
+| 10 | GET | `/estaciones` | Lista las estaciones | 200 |
+| 11 | GET | `/estaciones/{estacion_id}` | Obtiene una estación por id | 200, 404, 422 |
+| 12 | PATCH | `/estaciones/{estacion_id}` | Cambia el estado de una estación | 200, 404, 422 |
+| 13 | POST | `/reservas` | Crea una reserva y calcula su costo (RN1, RN2) | 201, 400 (RN2), 404 (estación o cliente no existe), 409 (RN1), 422 |
+| 14 | GET | `/reservas` | Lista reservas con filtro por `fecha`, orden (`ordenar_por`: `fecha`, `costo` o `id`; `direccion`: `asc` o `desc`) y paginación (`pagina`, `limite`) | 200, 422 |
+| 15 | GET | `/reservas/{reserva_id}` | Obtiene una reserva por id | 200, 404, 422 |
+| 16 | PATCH | `/reservas/{reserva_id}` | Cambia el estado de una reserva (RN3) | 200, 400 (RN3), 404, 422 |
+| 17 | DELETE | `/reservas/{reserva_id}` | Elimina una reserva | 204, 404 |
  
 ### Códigos HTTP
  
