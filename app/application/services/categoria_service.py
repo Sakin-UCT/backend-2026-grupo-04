@@ -1,22 +1,12 @@
 from app.domain.categoria import Categoria
-from app.infrastructure.repositories.categoria_repo import CategoriaRepository
-from app.presentation.schemas.categoria_schema import CategoriaCreate
-
-try:
-    from app.domain.excepciones import RecursoNoEncontradoError, ConflictoError
-except ImportError:
-    class RecursoNoEncontradoError(Exception):
-        pass
-
-    class ConflictoError(Exception):
-        pass
+from app.domain.excepciones import RecursoNoEncontradoError, ConflictoError
 
 
 class CategoriaService:
-    def __init__(self, repo: CategoriaRepository):
+    def __init__(self, repo):
         self.repo = repo
 
-    def crear(self, datos: CategoriaCreate) -> Categoria:
+    def crear(self, datos) -> Categoria:
         nueva_categoria = Categoria(
             id=None,
             nombre=datos.nombre,
@@ -24,20 +14,13 @@ class CategoriaService:
             descripcion=datos.descripcion,
             plataforma=datos.plataforma,
         )
-        try:
-            return self.repo.guardar(nueva_categoria)
-        except ConflictoError:
-            raise
-        except Exception as e:
-            if "ConflictoError" in str(e):
-                raise ConflictoError(str(e).replace("ConflictoError: ", ""))
-            raise
+        return self.repo.guardar(nueva_categoria)
 
     def listar(self) -> list[Categoria]:
-        return self.repo.obtener_todas()
+        return self.repo.obtener_todos()
 
     def obtener(self, categoria_id: int) -> Categoria:
         categoria = self.repo.obtener_por_id(categoria_id)
-        if not categoria:
-            raise RecursoNoEncontradoError(f"Categoría con id {categoria_id} no encontrada.")
+        if categoria is None:
+            raise RecursoNoEncontradoError(f"No existe una categoría con el ID {categoria_id}")
         return categoria
