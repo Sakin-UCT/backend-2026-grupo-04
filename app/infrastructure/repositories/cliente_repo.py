@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from models.cliente_model import ClienteModel
+from app.infrastructure.models.cliente_model import ClienteModel
 from app.domain.cliente import Cliente
 from app.infrastructure.mappers import cliente_to_domain, cliente_to_model
 
