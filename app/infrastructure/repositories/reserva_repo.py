@@ -1,58 +1,124 @@
-from domain.reserva import EstadoReserva, Reserva
+from datetime import date
+
+from sqlalchemy import exists, func, select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import Session
+
+from app.domain.excepciones import ConflictoError
+from app.domain.reserva import EstadoReserva, Reserva
+from app.infrastructure.mappers import reserva_to_domain, reserva_to_model
+from app.infrastructure.models.reserva_model import ReservaModel
+
+COLUMNAS_ORDENABLES = {
+    "fecha": ReservaModel.fecha,
+    "costo": ReservaModel.costo,
+    "id": ReservaModel.id,
+}
+DIRECCIONES = ("asc", "desc")
+
 
 class ReservaRepository:
-    def __init__(self):
-        self._reservas = []
-        self._siguiente_id = 1
+
+    def __init__(self, db: Session):
+        self.db = db
 
     def obtener_todos(self):
-        return list(self._reservas)
+        modelos = self.db.scalars(select(ReservaModel).order_by(ReservaModel.id)).all()
+        return [reserva_to_domain(m) for m in modelos]
 
-    def obtener_por_id(self, reserva_id):
-        for reserva in self._reservas:
-            if reserva.id == reserva_id:
-                return reserva
-        return None
+    def obtener_por_id(self, reserva_id: int):
+        modelo = self.db.get(ReservaModel, reserva_id)
+        return reserva_to_domain(modelo) if modelo is not None else None
 
-    def guardar(self, datos):
-        nueva_reserva = Reserva(
-            id=self._siguiente_id,
-            cliente_id=datos.cliente_id,
-            estacion_id=datos.estacion_id,
-            fecha=datos.fecha,
-            turno=datos.turno,
-            costo=0,
-            estado=EstadoReserva.CONFIRMADA,
-        )
-        self._siguiente_id += 1
-        self._reservas.append(nueva_reserva)
-        return nueva_reserva
+    def guardar(self, reserva: Reserva):
+        modelo = reserva_to_model(reserva)
+        self.db.add(modelo)
+        self._confirmar()
+        self.db.refresh(modelo)
+        return reserva_to_domain(modelo)
 
-    def actualizar(self, reserva_id, nuevo_estado):
-        reserva = self.obtener_por_id(reserva_id)
-        if reserva is None:
+    def actualizar(self, reserva: Reserva):
+        if reserva.id is None:
             return None
-        reserva.estado = nuevo_estado
-        return reserva
+        modelo = self.db.get(ReservaModel, reserva.id)
+        if modelo is None:
+            return None
+        modelo.cliente_id = reserva.cliente_id
+        modelo.estacion_id = reserva.estacion_id
+        modelo.fecha = reserva.fecha
+        modelo.turno = reserva.turno
+        modelo.costo = reserva.costo
+        modelo.estado = EstadoReserva(reserva.estado).value
+        self._confirmar()
+        self.db.refresh(modelo)
+        return reserva_to_domain(modelo)
 
-    def existe_conflicto(self, estacion_id, fecha, turno):
-        for reserva in self._reservas:
-            mismo_turno = (
-                reserva.estacion_id == estacion_id
-                and reserva.fecha == fecha
-                and reserva.turno == turno
-            )
-            esta_activa = reserva.estado in (EstadoReserva.CONFIRMADA, EstadoReserva.EN_CURSO)
-            if mismo_turno and esta_activa:
-                return True
-        return False
-
-    def eliminar(self, reserva_id):
-        reserva = self.obtener_por_id(reserva_id)
-        if reserva is None:
+    def eliminar(self, reserva_id: int):
+        modelo = self.db.get(ReservaModel, reserva_id)
+        if modelo is None:
             return False
-        self._reservas.remove(reserva)
+        self.db.delete(modelo)
+        self._confirmar()
         return True
 
-reserva_repositorio = ReservaRepository()
-#llamar a esto
+    def existe_conflicto(self, estacion_id: int, fecha: date, turno: str):
+        activos = (EstadoReserva.CONFIRMADA.value, EstadoReserva.EN_CURSO.value)
+        consulta = select(
+            exists().where(
+                ReservaModel.estacion_id == estacion_id,
+                ReservaModel.fecha == fecha,
+                ReservaModel.turno == turno,
+                ReservaModel.estado.in_(activos),
+            )
+        )
+        return bool(self.db.scalar(consulta))
+
+    def listar_filtrado(
+        self,
+        fecha: date | None = None,
+        ordenar_por: str | None = None,
+        direccion: str = "asc",
+        pagina: int = 1,
+        limite: int = 20,
+    ) -> tuple[list[Reserva], int]:
+        columna = COLUMNAS_ORDENABLES.get(ordenar_por or "id")
+        if columna is None:
+            raise ValueError(f"ordenar_por debe ser uno de {sorted(COLUMNAS_ORDENABLES)}")
+        if direccion not in DIRECCIONES:
+            raise ValueError("direccion debe ser 'asc' o 'desc'")
+        if pagina < 1 or limite < 1:
+            raise ValueError("pagina y limite deben ser mayores o iguales a 1")
+
+        filtros = []
+        if fecha is not None:
+            filtros.append(ReservaModel.fecha == fecha)
+
+        total = self.db.scalar(
+            select(func.count()).select_from(ReservaModel).where(*filtros)
+        ) or 0
+
+        orden = [columna.desc() if direccion == "desc" else columna.asc()]
+        if columna is not ReservaModel.id:
+            orden.append(ReservaModel.id.asc())
+
+        consulta = (
+            select(ReservaModel)
+            .where(*filtros)
+            .order_by(*orden)
+            .offset((pagina - 1) * limite)
+            .limit(limite)
+        )
+        modelos = self.db.scalars(consulta).all()
+        return [reserva_to_domain(m) for m in modelos], total
+
+    def _confirmar(self):
+        try:
+            self.db.commit()
+        except IntegrityError as error:
+            self.db.rollback()
+            raise ConflictoError(
+                "No se pudo guardar la reserva: el turno ya está reservado o el cliente o la estación no existen"
+            ) from error
+        except SQLAlchemyError:
+            self.db.rollback()
+            raise
