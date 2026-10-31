@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from models.categoria_model import CategoriaModel
+from app.infrastructure.models.categoria_model import CategoriaModel
 from app.domain.categoria import Categoria
 from app.infrastructure.mappers import categoria_to_domain, categoria_to_model
 
