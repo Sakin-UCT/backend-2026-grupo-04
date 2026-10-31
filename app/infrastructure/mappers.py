@@ -8,6 +8,9 @@ from app.domain.reserva import Reserva, EstadoReserva
 from app.infrastructure.models.estacion_model import EstacionModel
 from app.infrastructure.models.reserva_model import ReservaModel
 
+#_to_domain: ORM  a dominio
+#_to_model: dominio a ORM
+
 def cliente_to_domain(model: ClienteModel) -> Cliente:
     if not model:
         return None
@@ -47,3 +50,46 @@ def categoria_to_model(entity: Categoria) -> CategoriaModel:
         descripcion=entity.descripcion,
         plataforma=entity.plataforma
     )
+
+# Estacion (Kevin)
+def estacion_to_domain(model: EstacionModel):
+    return Estacion(
+        id=model.id,
+        codigo=model.codigo,
+        ubicacion=model.ubicacion,
+        categoria_id=model.categoria_id,
+        estado=EstadoEstacion(model.estado),
+    )
+ 
+def estacion_to_model(estacion: Estacion):
+    return EstacionModel(
+        id=estacion.id,
+        codigo=estacion.codigo,
+        ubicacion=estacion.ubicacion,
+        categoria_id=estacion.categoria_id,
+        estado=EstadoEstacion(estacion.estado).value,
+    )
+ 
+# Reserva (Kevin)
+def reserva_to_domain(model: ReservaModel):
+    return Reserva(
+        id=model.id,
+        cliente_id=model.cliente_id,
+        estacion_id=model.estacion_id,
+        fecha=model.fecha,
+        turno=model.turno,
+        costo=model.costo,
+        estado=EstadoReserva(model.estado),
+    )
+ 
+def reserva_to_model(reserva: Reserva):
+    return ReservaModel(
+        id=reserva.id,
+        cliente_id=reserva.cliente_id,
+        estacion_id=reserva.estacion_id,
+        fecha=reserva.fecha,
+        turno=reserva.turno,
+        costo=reserva.costo,
+        estado=EstadoReserva(reserva.estado).value,
+    )
+ 
