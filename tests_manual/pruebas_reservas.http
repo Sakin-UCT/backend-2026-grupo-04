@@ -1,38 +1,129 @@
-### 1. Crear una reserva exitosamente (200 OK)
-POST http://localhost:8000/reservas
+@baseUrl = http://127.0.0.1:8000
+
+### ============================================================================
+### 1. LISTAR RESERVAS (Sin filtros, verifica las 2 reservas creadas por seed.py)
+### Esperado: 200 OK (Respuesta paginada con items, total, pagina, limite, total_paginas)
+### ============================================================================
+GET {{baseUrl}}/reservas/
+Accept: application/json
+
+
+### ============================================================================
+### 2. LISTAR RESERVAS CON FILTRO, ORDEN Y PAGINACIÓN
+### Filtra por fecha del seed (2026-11-10), ordena por costo descendente, página 1, límite 5
+### Esperado: 200 OK (Primer item debe ser Reserva ID 1 con costo 9000.0, luego ID 2 con 4500.0)
+### ============================================================================
+GET {{baseUrl}}/reservas/?fecha=2026-11-10&ordenar_por=costo&direccion=desc&pagina=1&limite=5
+Accept: application/json
+
+
+### ============================================================================
+### 3. OBTENER RESERVA POR ID EXISTENTE (Del seed: ID 1)
+### Esperado: 200 OK
+### ============================================================================
+GET {{baseUrl}}/reservas/1
+Accept: application/json
+
+
+### ============================================================================
+### 4. OBTENER RESERVA INEXISTENTE
+### Esperado: 404 Not Found (RESOURCE_NOT_FOUND)
+### ============================================================================
+GET {{baseUrl}}/reservas/999
+Accept: application/json
+
+
+### ============================================================================
+### 5. CREAR RESERVA VÁLIDA (También usada para comprobar PERSISTENCIA)
+### Estación 1 (PC Gama Alta, 4500/h), Turno 18:00-20:00 (2h) -> Costo esperado: 9000.0
+### Esperado: 201 Created (Actualizado de 200 OK a 201 Created)
+### ============================================================================
+POST {{baseUrl}}/reservas/
 Content-Type: application/json
 
 {
   "cliente_id": 1,
   "estacion_id": 1,
-  "fecha": "2026-10-01",
-  "turno": "10:00-11:00"
+  "fecha": "2026-11-10",
+  "turno": "18:00-20:00"
 }
 
-### 2. Error 400: reserva duplicada para la misma estación, fecha y turno (RN1)
-POST http://localhost:8000/reservas
+
+### ============================================================================
+### 6. REGLA DE NEGOCIO RN1: Conflicto de horario en misma estación, fecha y turno
+### La Reserva ID 1 del seed ya ocupa estacion_id=1 el 2026-11-10 en turno "10:00-12:00"
+### Esperado: 409 Conflict (Actualizado de 400 en Parte 1 a 409 CONFLICT en Parte 2)
+### ============================================================================
+POST {{baseUrl}}/reservas/
 Content-Type: application/json
 
 {
   "cliente_id": 2,
   "estacion_id": 1,
-  "fecha": "2026-10-01",
-  "turno": "10:00-11:00"
+  "fecha": "2026-11-10",
+  "turno": "10:00-12:00"
 }
 
-### 3. Error 400: estación en mantención o fuera de servicio (RN2)
-POST http://localhost:8000/reservas
+
+### ============================================================================
+### 7. REGLA DE NEGOCIO RN2: Reservar estación en_mantencion o fuera_de_servicio
+### La Estación ID 2 ("PS5-01") fue creada en estado "en_mantencion" por seed.py
+### Esperado: 400 Bad Request (BUSINESS_RULE_VIOLATION)
+### ============================================================================
+POST {{baseUrl}}/reservas/
 Content-Type: application/json
 
 {
   "cliente_id": 1,
   "estacion_id": 2,
-  "fecha": "2026-10-01",
-  "turno": "12:00-13:00"
+  "fecha": "2026-11-10",
+  "turno": "12:00-14:00"
 }
 
-### 4. Listar reservas con filtro, orden y paginación (200 OK)
-GET http://localhost:8000/reservas?fecha=2026-10-01&ordenar_por=costo&direccion=asc&pagina=1&limite=20
 
-### 5. Obtener una reserva por ID existente (200 OK)
-GET http://localhost:8000/reservas/1
+### ============================================================================
+### 8. REGLA DE NEGOCIO RN3 (Fallo): Pasar reserva a "completada" sin estar "en_curso"
+### La Reserva ID 1 del seed está en estado "confirmada" (no "en_curso")
+### Esperado: 400 Bad Request (BUSINESS_RULE_VIOLATION)
+### ============================================================================
+PATCH {{baseUrl}}/reservas/1
+Content-Type: application/json
+
+{
+  "estado": "completada"
+}
+
+
+### ============================================================================
+### 9. REGLA DE NEGOCIO RN3 (Éxito): Pasar a "completada" una reserva que SÍ está "en_curso"
+### La Reserva ID 2 del seed fue creada en estado "en_curso"
+### Esperado: 200 OK (Estado actualizado a "completada")
+### ============================================================================
+PATCH {{baseUrl}}/reservas/2
+Content-Type: application/json
+
+{
+  "estado": "completada"
+}
+
+
+### ============================================================================
+### 10. VALIDACIÓN DE FORMATO (422): Turno con hora fin menor a hora inicio o mal formato
+### Esperado: 422 Unprocessable Entity (VALIDATION_ERROR)
+### ============================================================================
+POST {{baseUrl}}/reservas/
+Content-Type: application/json
+
+{
+  "cliente_id": 1,
+  "estacion_id": 1,
+  "fecha": "2026-11-10",
+  "turno": "16:00-14:00"
+}
+
+
+### ============================================================================
+### 11. ELIMINAR RESERVA EXISTENTE (Elimina la Reserva ID 3 creada en el paso 5)
+### Esperado: 204 No Content
+### ============================================================================
+DELETE {{baseUrl}}/reservas/3

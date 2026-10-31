@@ -1,62 +1,110 @@
-from fastapi import APIRouter, HTTPException, status
-from typing import List
-from schemas.cliente_schema import ClienteCreate, ClienteResponse, ClienteUpdate
-from repositories.cliente_repo import cliente_repo
+from fastapi import APIRouter, Depends, Response, status
+from sqlalchemy.orm import Session
+
+from app.application.services.cliente_service import ClienteService
+from app.infrastructure.repositories.cliente_repo import ClienteRepository
+from app.presentation.dependencies import get_db
+from app.presentation.schemas.cliente_schema import (
+    ClienteCreate,
+    ClienteResponse,
+    ClienteUpdate,
+)
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
-@router.post("", response_model=ClienteResponse, status_code=status.HTTP_201_CREATED)
-def crear_cliente(cliente_in: ClienteCreate):
-    return cliente_repo.guardar(cliente_in)
 
-@router.get("", response_model=List[ClienteResponse], status_code=status.HTTP_200_OK)
-def listar_clientes():
-    return cliente_repo.obtener_todos()
+def get_cliente_service(db: Session = Depends(get_db)) -> ClienteService:
+    return ClienteService(ClienteRepository(db))
 
-@router.get("/{cliente_id}", response_model=ClienteResponse, status_code=status.HTTP_200_OK)
-def obtener_cliente(cliente_id: int):
-    cliente = cliente_repo.obtener_por_id(cliente_id)
-    if not cliente:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "error": {
-                    "code": "RESOURCE_NOT_FOUND",
-                    "message": f"No existe un cliente con el ID {cliente_id}",
-                    "details": []
-                }
-            }
-        )
-    return cliente
 
-@router.patch("/{cliente_id}", response_model=ClienteResponse, status_code=status.HTTP_200_OK)
-def actualizar_cliente(cliente_id: int, cliente_in: ClienteUpdate):
-    cliente_actualizado = cliente_repo.actualizar(cliente_id, cliente_in)
-    if not cliente_actualizado:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "error": {
-                    "code": "RESOURCE_NOT_FOUND",
-                    "message": f"No existe un cliente con el ID {cliente_id}",
-                    "details": []
-                }
-            }
-        )
-    return cliente_actualizado
+@router.post(
+    "",
+    response_model=ClienteResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar un nuevo cliente",
+    description="Crea un nuevo cliente en el sistema validando que su correo electrónico sea único.",
+    responses={
+        201: {"description": "Cliente creado exitosamente"},
+        409: {"description": "Conflicto: el correo electrónico ya está registrado"},
+        422: {"description": "Error de validación en los datos enviados"},
+    },
+)
+def crear_cliente(
+    datos: ClienteCreate,
+    service: ClienteService = Depends(get_cliente_service),
+):
+    return service.crear(datos)
 
-@router.delete("/{cliente_id}", status_code=status.HTTP_204_NO_CONTENT)
-def eliminar_cliente(cliente_id: int):
-    eliminado = cliente_repo.eliminar(cliente_id)
-    if not eliminado:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "error": {
-                    "code": "RESOURCE_NOT_FOUND",
-                    "message": f"No existe un cliente con el ID {cliente_id}",
-                    "details": []
-                }
-            }
-        )
-    return None
+
+@router.get(
+    "",
+    response_model=list[ClienteResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Listar todos los clientes",
+    description="Obtiene la lista completa de clientes registrados en el centro gamer.",
+    responses={
+        200: {"description": "Lista de clientes obtenida exitosamente"},
+    },
+)
+def listar_clientes(
+    service: ClienteService = Depends(get_cliente_service),
+):
+    return service.listar()
+
+
+@router.get(
+    "/{cliente_id}",
+    response_model=ClienteResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Obtener un cliente por ID",
+    description="Busca y devuelve los datos de un cliente específico por su ID.",
+    responses={
+        200: {"description": "Cliente encontrado"},
+        404: {"description": "Cliente no encontrado"},
+    },
+)
+def obtener_cliente(
+    cliente_id: int,
+    service: ClienteService = Depends(get_cliente_service),
+):
+    return service.obtener(cliente_id)
+
+
+@router.put(
+    "/{cliente_id}",
+    response_model=ClienteResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Actualizar datos de un cliente",
+    description="Actualiza parcial o totalmente los datos (nombre, correo, teléfono) de un cliente existente.",
+    responses={
+        200: {"description": "Cliente actualizado exitosamente"},
+        404: {"description": "Cliente no encontrado"},
+        409: {"description": "Conflicto: el nuevo correo ya pertenece a otro cliente"},
+        422: {"description": "Error de validación en los datos enviados"},
+    },
+)
+def actualizar_cliente(
+    cliente_id: int,
+    datos: ClienteUpdate,
+    service: ClienteService = Depends(get_cliente_service),
+):
+    return service.actualizar(cliente_id, datos)
+
+
+@router.delete(
+    "/{cliente_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar un cliente",
+    description="Elimina un cliente del sistema si no posee reservas asociadas.",
+    responses={
+        204: {"description": "Cliente eliminado exitosamente (sin contenido)"},
+        404: {"description": "Cliente no encontrado"},
+        409: {"description": "Conflicto: no se puede eliminar un cliente con reservas asociadas"},
+    },
+)
+def eliminar_cliente(
+    cliente_id: int,
+    service: ClienteService = Depends(get_cliente_service),
+):
+    service.eliminar(cliente_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

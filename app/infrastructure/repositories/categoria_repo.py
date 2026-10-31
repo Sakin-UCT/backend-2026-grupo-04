@@ -1,50 +1,28 @@
-from typing import List, Optional
-from domain.categoria import CategoriaEstacion  # Import corregido sin 'app.'
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from app.infrastructure.models.categoria_model import CategoriaModel
+from app.domain.categoria import Categoria
+from app.infrastructure.mappers import categoria_to_domain, categoria_to_model
 
 class CategoriaRepository:
-    def __init__(self):
-        self._categorias: list[CategoriaEstacion] = []
-        self._contador_id: int = 1
+    def __init__(self, db: Session):
+        self.db = db
 
-    def obtener_todos(self) -> List[CategoriaEstacion]:
-        return self._categorias
+    def obtener_todas(self) -> list[Categoria]:
+        modelos = self.db.query(CategoriaModel).all()
+        return [categoria_to_domain(m) for m in modelos]
 
-    def obtener_por_id(self, categoria_id: int) -> Optional[CategoriaEstacion]:
-        for categoria in self._categorias:
-            if categoria.id == categoria_id:
-                return categoria
-        return None
+    def obtener_por_id(self, categoria_id: int) -> Categoria | None:
+        modelo = self.db.query(CategoriaModel).filter(CategoriaModel.id == categoria_id).first()
+        return categoria_to_domain(modelo) if modelo else None
 
-    def guardar(self, datos) -> CategoriaEstacion:
-        nueva_categoria = CategoriaEstacion(
-            id=self._contador_id,
-            nombre=datos.nombre,
-            tarifa_hora=datos.tarifa_hora,
-            descripcion=datos.descripcion
-        )
-        self._categorias.append(nueva_categoria)
-        self._contador_id += 1
-        return nueva_categoria
-
-    def actualizar(self, categoria_id: int, datos) -> Optional[CategoriaEstacion]:
-        categoria = self.obtener_por_id(categoria_id)
-        if not categoria:
-            return None
-            
-        if hasattr(datos, "nombre") and datos.nombre is not None:
-            categoria.nombre = datos.nombre
-        if hasattr(datos, "tarifa_hora") and datos.tarifa_hora is not None:
-            categoria.tarifa_hora = datos.tarifa_hora
-        if hasattr(datos, "descripcion") and datos.descripcion is not None:
-            categoria.descripcion = datos.descripcion
-            
-        return categoria
-
-    def eliminar(self, categoria_id: int) -> bool:
-        categoria = self.obtener_por_id(categoria_id)
-        if categoria:
-            self._categorias.remove(categoria)
-            return True
-        return False
-
-categoria_repo = CategoriaRepository()
+    def guardar(self, categoria: Categoria) -> Categoria:
+        modelo = categoria_to_model(categoria)
+        try:
+            self.db.add(modelo)
+            self.db.commit()
+            self.db.refresh(modelo)
+            return categoria_to_domain(modelo)
+        except IntegrityError:
+            self.db.rollback()
+            raise Exception("ConflictoError: La categoría ya existe.")
