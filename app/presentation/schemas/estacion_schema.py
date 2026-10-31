@@ -6,7 +6,7 @@ class EstacionCreate(BaseModel):
     model_config = ConfigDict(
         str_strip_whitespace=True,
         json_schema_extra={
-            "example": [
+            "examples": [
                 {"codigo": "PC-01", "ubicacion": "Sala principal, fila A", "categoria_id": 1}]
         },
     )
@@ -26,7 +26,7 @@ class EstacionCreate(BaseModel):
 class EstacionUpdate(BaseModel):
 
     model_config = ConfigDict(
-        json_schema_extra={"example": [{"estado": "en_mantencion"}]},
+        json_schema_extra={"examples": [{"estado": "en_mantencion"}]},
     )
 
     estado: EstadoEstacion = Field(
@@ -38,7 +38,7 @@ class EstacionResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
-            "example": [
+            "examples": [
                 {
                     "id": 1,
                     "codigo": "PC-01",

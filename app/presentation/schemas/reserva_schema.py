@@ -31,7 +31,7 @@ class ReservaCreate(BaseModel):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "example": [
+            "examples": [
                 {"cliente_id": 1, "estacion_id": 1, "fecha": "2026-11-05", "turno": "10:00-11:00"}
             ]}
     )
@@ -40,7 +40,7 @@ class ReservaCreate(BaseModel):
 class ReservaUpdate(BaseModel):
     
     estado: EstadoReserva
-    model_config = ConfigDict(json_schema_extra={"example": [{"estado": "en_curso"}]})
+    model_config = ConfigDict(json_schema_extra={"examples": [{"estado": "en_curso"}]})
 
 class ReservaResponse(BaseModel):
 
@@ -66,7 +66,7 @@ class ReservaPaginada(BaseModel):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "example": [
+            "examples": [
                 {
                     "items": [EJEMPLO_RESERVA],
                     "total": 1,
