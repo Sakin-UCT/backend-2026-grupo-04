@@ -70,7 +70,7 @@ Content-Type: application/json
 ### 7. ACTUALIZAR CLIENTE EXISTENTE (Actualiza el cliente ID 3 recién creado)
 ### Esperado: 200 OK
 ### ============================================================================
-PUT {{baseUrl}}/clientes/3
+PATCH  {{baseUrl}}/clientes/3
 Content-Type: application/json
 
 {
@@ -84,7 +84,7 @@ Content-Type: application/json
 ### 8. ACTUALIZAR CLIENTE INEXISTENTE
 ### Esperado: 404 Not Found (RESOURCE_NOT_FOUND)
 ### ============================================================================
-PUT {{baseUrl}}/clientes/999
+PATCH {{baseUrl}}/clientes/999
 Content-Type: application/json
 
 {
