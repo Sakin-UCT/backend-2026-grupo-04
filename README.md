@@ -415,8 +415,7 @@ Los resultados quedan registrados en `tests_manual/evidencia_pruebas.md`.
 | Javier | Estructura por capas del proyecto; services y routers de Estación y Reserva |
 | Benito | `database.py`, Alembic y modelos de Cliente y Categoría; repositorios de Cliente y Categoría; migración inicial |
 | Kevin | Modelos de Estación y Reserva; repositorios de Estación y Reserva; diagramas y tabla del contrato REST |
-| Joaquin | Services y routers de Cliente y Categoría |
-| Joako | Seeders y pruebas |
+| Joaquin | Services y routers de Cliente y Categoría ; Seeders y pruebas |
 | Sakin | Coordinación y seguimiento; integración técnica (`main.py`, `dependencies.py`, `compose.yml`, `.env.example`, `.gitignore`, `requirements.txt`) y README |
  
 ### Flujo de trabajo en Git
