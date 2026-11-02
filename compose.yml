@@ -1,7 +1,7 @@
 services:
   postgres_db:
     image: postgres:15-alpine
-    container_name: postgres_db
+    container_name: centro_gamer_db
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -16,7 +16,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: pgadmin_container
+    container_name: centro_gamer_pgadmin
     restart: always
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
