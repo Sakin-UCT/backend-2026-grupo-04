@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Literal
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Path, Query, status
 from sqlalchemy.orm import Session
 from app.presentation.dependencies import get_db
 from app.presentation.schemas.reserva_schema import ReservaCreate, ReservaUpdate, ReservaResponse, ReservaPaginada
@@ -72,7 +72,7 @@ def listar_reservas(
     responses={404: {"description": "La reserva no existe"}},
 )
 def obtener_reserva(
-    reserva_id: int,
+    reserva_id: int = Path(..., ge=1, description="ID de la reserva"),
     service: ReservaService = Depends(get_reserva_service),
 ):
     return service.obtener(reserva_id)
@@ -91,8 +91,8 @@ def obtener_reserva(
     },
 )
 def cambiar_estado_reserva(
-    reserva_id: int,
     datos: ReservaUpdate,
+    reserva_id: int = Path(..., ge=1, description="ID de la reserva"),
     service: ReservaService = Depends(get_reserva_service),
 ):
     return service.cambiar_estado(reserva_id, datos.estado)
@@ -106,7 +106,7 @@ def cambiar_estado_reserva(
     responses={404: {"description": "La reserva no existe"}},
 )
 def eliminar_reserva(
-    reserva_id: int,
+    reserva_id: int = Path(..., ge=1, description="ID de la reserva"),
     service: ReservaService = Depends(get_reserva_service),
 ):
     service.eliminar(reserva_id)
