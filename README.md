@@ -345,7 +345,7 @@ classDiagram
 | 1 | POST | `/clientes` | Crea un cliente | 201, 409 (correo duplicado), 422 |
 | 2 | GET | `/clientes` | Lista los clientes | 200 |
 | 3 | GET | `/clientes/{cliente_id}` | Obtiene un cliente por id | 200, 404, 422 |
-| 4 | PATCH | `/clientes/{cliente_id}` | Actualiza los datos de un cliente | 200, 404, 409 (correo duplicado), 422 |
+| 4 | PUT | `/clientes/{cliente_id}` | Actualiza los datos de un cliente | 200, 404, 409 (correo duplicado), 422 |
 | 5 | DELETE | `/clientes/{cliente_id}` | Elimina un cliente | 204, 404, 409 (tiene reservas) |
 | 6 | POST | `/categorias` | Crea una categoría de estación | 201, 409 (nombre duplicado), 422 |
 | 7 | GET | `/categorias` | Lista las categorías | 200 |
