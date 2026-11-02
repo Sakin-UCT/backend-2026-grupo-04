@@ -2,7 +2,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.infrastructure.models.cliente_model import ClienteModel
 from app.domain.cliente import Cliente
+from app.domain.excepciones import ConflictoError
 from app.infrastructure.mappers import cliente_to_domain, cliente_to_model
+
 
 class ClienteRepository:
     def __init__(self, db: Session):
@@ -25,24 +27,24 @@ class ClienteRepository:
             return cliente_to_domain(modelo)
         except IntegrityError:
             self.db.rollback()
-            raise Exception("ConflictoError: El correo ya está registrado o hay un error de integridad.")
+            raise ConflictoError("El correo ya está registrado.")
 
-    def actualizar(self, cliente: Cliente) -> Cliente:
+    def actualizar(self, cliente: Cliente) -> Cliente | None:
         modelo = self.db.query(ClienteModel).filter(ClienteModel.id == cliente.id).first()
         if not modelo:
             return None
-        
+
         modelo.nombre = cliente.nombre
         modelo.correo = cliente.correo
         modelo.telefono = cliente.telefono
-        
+
         try:
             self.db.commit()
             self.db.refresh(modelo)
             return cliente_to_domain(modelo)
         except IntegrityError:
             self.db.rollback()
-            raise Exception("ConflictoError: Error al actualizar.")
+            raise ConflictoError("El correo ya pertenece a otro cliente.")
 
     def eliminar(self, cliente_id: int) -> bool:
         modelo = self.db.query(ClienteModel).filter(ClienteModel.id == cliente_id).first()
@@ -54,4 +56,4 @@ class ClienteRepository:
             return True
         except IntegrityError:
             self.db.rollback()
-            raise Exception("ConflictoError: No se puede eliminar el cliente porque tiene reservas asociadas.")
+            raise ConflictoError("No se puede eliminar el cliente porque tiene reservas asociadas.")

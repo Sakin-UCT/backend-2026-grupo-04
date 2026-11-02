@@ -70,7 +70,7 @@ def obtener_cliente(
     return service.obtener(cliente_id)
 
 
-@router.put(
+@router.patch(
     "/{cliente_id}",
     response_model=ClienteResponse,
     status_code=status.HTTP_200_OK,

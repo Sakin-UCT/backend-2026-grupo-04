@@ -14,6 +14,7 @@ from app.infrastructure.models import (  # noqa: F401
     estacion_model,
     reserva_model,
 )
+
 load_dotenv()
 
 config = context.config
