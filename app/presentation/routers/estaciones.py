@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy.orm import Session
 from app.presentation.dependencies import get_db
 from app.presentation.schemas.estacion_schema import EstacionCreate, EstacionUpdate, EstacionResponse
@@ -25,6 +25,7 @@ def get_estacion_service(db: Session = Depends(get_db)):
                 "Queda disponible por defecto.",
     responses={
         404: {"description": "La categoría indicada no existe"},
+        409: {"description": "Ya existe una estación con ese código"},
         422: {"description": "Datos inválidos"},
     },
 )
@@ -53,7 +54,7 @@ def listar_estaciones(service: EstacionService = Depends(get_estacion_service)):
     responses={404: {"description": "La estación no existe"}},
 )
 def obtener_estacion(
-    estacion_id: int,
+    estacion_id: int = Path(..., ge=1, description="ID de la estación"),
     service: EstacionService = Depends(get_estacion_service),
 ):
     return service.obtener(estacion_id)
@@ -70,8 +71,8 @@ def obtener_estacion(
     },
 )
 def cambiar_estado_estacion(
-    estacion_id: int,
     datos: EstacionUpdate,
+    estacion_id: int = Path(..., ge=1, description="ID de la estación"),
     service: EstacionService = Depends(get_estacion_service),
 ):
     return service.cambiar_estado(estacion_id, datos.estado)
