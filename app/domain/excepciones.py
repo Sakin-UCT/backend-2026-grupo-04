@@ -1,4 +1,3 @@
-
 class DominioError(Exception):
     def __init__(self, mensaje: str):
         self.mensaje = mensaje
@@ -14,4 +13,12 @@ class ReglaNegocioError(DominioError):
 
 class ConflictoError(DominioError):
     #violacion de regla duplicidad
+    pass
+
+class NoAutenticadoError(DominioError):
+    #usuario no autenticado
+    pass
+
+class SinPermisoError(DominioError):
+    #usuario sin permiso
     pass
