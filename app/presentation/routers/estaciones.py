@@ -5,6 +5,8 @@ from app.presentation.schemas.estacion_schema import EstacionCreate, EstacionUpd
 from app.application.services.estacion_service import EstacionService
 from app.infrastructure.repositories.estacion_repo import EstacionRepository
 from app.infrastructure.repositories.categoria_repo import CategoriaRepository
+from app.presentation.security.permisos import requiere_perfil
+from app.presentation.security.usuario_actual import get_usuario_actual
 
 router = APIRouter(prefix="/estaciones", tags=["Estaciones"])
 
@@ -23,7 +25,9 @@ def get_estacion_service(db: Session = Depends(get_db)):
     summary="Crear una estación",
     description="Registra una estación nueva asociada a una categoría existente. "
                 "Queda disponible por defecto.",
+    dependencies=[Depends(get_usuario_actual)],
     responses={
+        401: {"description": "Token ausente, inválido o expirado"},
         404: {"description": "La categoría indicada no existe"},
         409: {"description": "Ya existe una estación con ese código"},
         422: {"description": "Datos inválidos"},
@@ -64,8 +68,12 @@ def obtener_estacion(
     "/{estacion_id}",
     response_model=EstacionResponse,
     summary="Cambiar el estado de una estación",
-    description="Marca la estación como disponible, en mantención o fuera de servicio.",
+    description="Marca la estación como disponible, en mantención o fuera de servicio. "
+                "Solo el perfil encargado puede hacerlo.",
+    dependencies=[Depends(requiere_perfil("encargado"))],
     responses={
+        401: {"description": "Token ausente, inválido o expirado"},
+        403: {"description": "El perfil no tiene permiso para esta operación"},
         404: {"description": "La estación no existe"},
         422: {"description": "Estado inválido"},
     },

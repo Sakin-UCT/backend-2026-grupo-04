@@ -10,8 +10,14 @@ from app.infrastructure.repositories.reserva_repo import ReservaRepository
 from app.infrastructure.repositories.estacion_repo import EstacionRepository
 from app.infrastructure.repositories.cliente_repo import ClienteRepository
 from app.infrastructure.repositories.categoria_repo import CategoriaRepository
+from app.presentation.security.usuario_actual import get_usuario_actual
 
-router = APIRouter(prefix="/reservas", tags=["Reservas"])
+router = APIRouter(
+    prefix="/reservas",
+    tags=["Reservas"],
+    dependencies=[Depends(get_usuario_actual)],
+    responses={401: {"description": "Token ausente, inválido o expirado"}},
+)
 
 
 def get_reserva_service(db: Session = Depends(get_db)):
@@ -110,3 +116,4 @@ def eliminar_reserva(
     service: ReservaService = Depends(get_reserva_service),
 ):
     service.eliminar(reserva_id)
+
