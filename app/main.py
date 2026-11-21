@@ -17,7 +17,14 @@ from app.domain.excepciones import (
     SinPermisoError,
 )
 from app.infrastructure.database import engine
-from app.presentation.routers import clientes, categorias, estaciones, reservas, auth, recuperacion
+from app.presentation.routers import (
+    clientes,
+    categorias,
+    estaciones,
+    reservas,
+    auth,
+    recuperacion,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -66,7 +73,9 @@ def _openapi_con_bearer():
         description=app.description,
         routes=app.routes,
     )
-    esquema.setdefault("components", {}).setdefault("securitySchemes", {})["BearerAuth"] = {
+    esquema.setdefault("components", {}).setdefault("securitySchemes", {})[
+        "BearerAuth"
+    ] = {
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
@@ -148,23 +157,26 @@ async def manejador_validacion(request: Request, exc: RequestValidationError):
         }
         for err in exc.errors()
     ]
-    return _error(422, "VALIDATION_ERROR", "Los datos enviados no son válidos", detalles)
+    return _error(
+        422, "VALIDATION_ERROR", "Los datos enviados no son válidos", detalles
+    )
+
 
 @app.exception_handler(RecursoNoEncontradoError)
 async def manejador_no_encontrado(request: Request, exc: RecursoNoEncontradoError):
     return _error(404, "RESOURCE_NOT_FOUND", str(exc))
- 
- 
+
+
 @app.exception_handler(ReglaNegocioError)
 async def manejador_regla_negocio(request: Request, exc: ReglaNegocioError):
     return _error(400, "BUSINESS_RULE_VIOLATION", str(exc))
- 
- 
+
+
 @app.exception_handler(ConflictoError)
 async def manejador_conflicto(request: Request, exc: ConflictoError):
     return _error(409, "CONFLICT", str(exc))
- 
- 
+
+
 @app.exception_handler(Exception)
 async def manejador_generico(request: Request, exc: Exception):
     logger.exception("Error no controlado en %s %s", request.method, request.url.path)

@@ -35,10 +35,16 @@ def bd_migrada():
 def _vaciar_tablas():
     """Vacía las tablas de negocio y conserva el historial de Alembic."""
     with engine.begin() as conexion:
-        nombres = conexion.execute(text(
-            "SELECT tablename FROM pg_tables "
-            "WHERE schemaname = 'public' AND tablename <> 'alembic_version'"
-        )).scalars().all()
+        nombres = (
+            conexion.execute(
+                text(
+                    "SELECT tablename FROM pg_tables "
+                    "WHERE schemaname = 'public' AND tablename <> 'alembic_version'"
+                )
+            )
+            .scalars()
+            .all()
+        )
         if nombres:
             lista = ", ".join(f'"{n}"' for n in nombres)
             conexion.execute(text(f"TRUNCATE {lista} RESTART IDENTITY CASCADE"))

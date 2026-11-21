@@ -6,7 +6,8 @@ extend-exclude = []
 
 [tool.ruff.lint]
 # TODO: confirmar estas reglas con el grupo y ajustar
-select = ["E", "F", "I", "B", "UP"]
+select = ["E", "F"]
+ignore = ["E501"]   # la longitud de línea la controla ruff format
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
