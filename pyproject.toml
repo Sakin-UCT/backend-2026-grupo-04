@@ -1,0 +1,27 @@
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+# TODO: decidir si excluir migrations/versions (código generado por Alembic)
+extend-exclude = []
+
+[tool.ruff.lint]
+# TODO: confirmar estas reglas con el grupo y ajustar
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers -m 'not e2e'"
+markers = [
+    "unit: pruebas unitarias, sin BD ni red",
+    "integration: pruebas con la BD real de prueba",
+    "e2e: pruebas contra la API levantada (requiere API_BASE_URL)",
+]
+
+[tool.coverage.run]
+source = ["app"]
+parallel = true
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true

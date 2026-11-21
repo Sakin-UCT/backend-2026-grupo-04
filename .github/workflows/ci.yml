@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read            # mínimo privilegio; un job que necesite más lo declara él
+
+env:
+  PYTHON_VERSION: "3.14"    # si setup-python no lo encuentra, revisar la versión de la acción
+  # Valores DESECHABLES solo para CI. Nunca secretos de despliegue aquí.
+  JWT_SECRET: "ci-solo-prueba-no-usar-en-produccion"
+  CORS_ORIGINS: "http://localhost:3000"
+  COOKIE_SECURE: "false"
+  MAILPIT_URL: "http://127.0.0.1:8025"
+  API_BASE_URL: "http://127.0.0.1:8000"
+  TEST_DATABASE_URL: "postgresql+psycopg2://gamer:gamer_test@localhost:5432/centro_gamer_test"
+
+jobs:
+  # ── 1. CALIDAD ───────────────────────────────────────────────
+  calidad:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Lint (Ruff check)
+        run: ruff check .
+      - name: Formato (Ruff, solo verificación)
+        run: ruff format --check .
+
+  # ── 2. PRUEBAS ───────────────────────────────────────────────
+  pruebas:
+    needs: calidad
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: gamer
+          POSTGRES_PASSWORD: gamer_test
+          POSTGRES_DB: centro_gamer_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gamer"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      mailpit:
+        image: axllent/mailpit:latest   # TODO: fijar una versión concreta
+        ports:
+          - 1025:1025
+          - 8025:8025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: Preparar carpeta de reportes
+        run: mkdir -p reportes
+
+      - name: Crear BD separada para la API (E2E)
+        env:
+          PGPASSWORD: gamer_test
+        run: psql -h localhost -U gamer -d centro_gamer_test -c "CREATE DATABASE centro_gamer_e2e;"
+
+      - name: Migraciones sobre la BD de prueba
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: alembic upgrade head
+
+      - name: Unitarias e integración con cobertura
+        run: pytest tests/unit tests/integration --cov=app --junitxml=reportes/junit-unit-int.xml
+
+      - name: Levantar la API real bajo coverage (segundo plano)
+        env:
+          DATABASE_URL: postgresql+psycopg2://gamer:gamer_test@localhost:5432/centro_gamer_e2e
+        run: |
+          alembic upgrade head
+          nohup coverage run --parallel-mode -m uvicorn app.main:app \
+            --host 127.0.0.1 --port 8000 > reportes/api.log 2>&1 &
+          echo $! > reportes/api.pid
+
+      - name: Esperar a /salud (falla si la API no responde)
+        run: |
+          curl --fail --silent --show-error \
+            --retry 30 --retry-delay 1 --retry-all-errors \
+            http://127.0.0.1:8000/salud
+
+      - name: Pruebas E2E contra la API
+        run: pytest tests/e2e --junitxml=reportes/junit-e2e.xml
+
+      - name: Parar la API con SIGTERM
+        if: always()
+        run: |
+          if [ -f reportes/api.pid ]; then
+            PID=$(cat reportes/api.pid)
+            kill -TERM "$PID" || true
+            for i in $(seq 1 15); do kill -0 "$PID" 2>/dev/null || break; sleep 1; done
+          fi
+
+      - name: Combinar cobertura y exigir 85 %
+        if: always()
+        run: |
+          coverage combine
+          coverage report
+          coverage xml -o reportes/cobertura.xml
+
+      - name: Resumen por tipo de prueba
+        if: always()
+        run: |
+          # TODO: leer los junit XML de reportes/ y escribir en $GITHUB_STEP_SUMMARY
+          #       una tabla con aprobadas y fallidas por tipo (unitarias, integración, E2E)
+
+      - name: Subir reportes y log de la API
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes-${{ github.sha }}
+          path: reportes/
+
+  # ── 3. CONSTRUIR IMAGEN ──────────────────────────────────────
+  construir:
+    needs: [calidad, pruebas]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir imagen etiquetada con el SHA
+        run: docker build --build-arg GIT_SHA=${{ github.sha }} -t centro-gamer-api:${{ github.sha }} .
+      # TODO: push a un registro solo en main, si el mecanismo de Kubero lo requiere
+
+  # ── 4. PROMOCIÓN A KUBERO UCT ────────────────────────────────
+  promocion-kubero:
+    needs: [calidad, pruebas, construir]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: kubero-uct       # los secretos de despliegue viven solo aquí
+    steps:
+      - name: Promoción a Kubero UCT
+        # env: (nombres de secretos según el mecanismo que indique el docente)
+        run: |
+          # TODO: mecanismo que habilite el docente. No inventarlo.
+          echo "::error::Mecanismo de promoción a Kubero UCT pendiente"
+          exit 1

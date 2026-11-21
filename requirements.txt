@@ -1,8 +1,16 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-alembic
-psycopg2-binary
-pydantic[email]
-python-dotenv
- 
+# Producción
+fastapi==0.165.0
+uvicorn[standard]==0.54.0
+sqlalchemy==2.1.9
+alembic==1.20.1
+psycopg2-binary==2.9.13
+pydantic[email]==2.14.4
+python-dotenv==1.2.4
+argon2-cffi==25.1.0
+PyJWT==2.15.1
+
+# Pruebas y calidad
+pytest==9.2.0
+pytest-cov==7.1.0
+httpx==0.28.1
+ruff==0.17.6
