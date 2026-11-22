@@ -1,11 +1,18 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
+import os
+from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 
+from app.domain.usuario import Perfil
 from app.infrastructure.database import SessionLocal
 from app.infrastructure.models.categoria_model import CategoriaModel
 from app.infrastructure.models.cliente_model import ClienteModel
 from app.infrastructure.models.estacion_model import EstacionModel
 from app.infrastructure.models.reserva_model import ReservaModel
+from app.infrastructure.models.usuario_model import UsuarioModel
+from app.infrastructure.security.password import hashear_password
+
+load_dotenv()
 
 
 def get_or_create_categoria(db: Session, nombre: str, **kwargs) -> CategoriaModel:
@@ -13,7 +20,6 @@ def get_or_create_categoria(db: Session, nombre: str, **kwargs) -> CategoriaMode
     if existente:
         return existente
 
-    # Filtra solo las columnas presentes en el modelo por seguridad
     columnas = {c.name for c in CategoriaModel.__table__.columns}
     datos = {"nombre": nombre, **{k: v for k, v in kwargs.items() if k in columnas}}
     nueva = CategoriaModel(**datos)
@@ -86,12 +92,39 @@ def get_or_create_reserva(
     return nueva
 
 
+def get_or_create_usuario(
+    db: Session,
+    correo: str,
+    password_plana: str,
+    perfil: Perfil,
+    cliente_id: int | None = None,
+) -> UsuarioModel:
+    existente = db.query(UsuarioModel).filter(UsuarioModel.correo == correo).first()
+    if existente:
+        return existente
+
+    nuevo = UsuarioModel(
+        correo=correo,
+        password_hash=hashear_password(password_plana),
+        perfil=perfil.value,
+        cliente_id=cliente_id,
+        intentos_fallidos=0,
+        bloqueado_hasta=None,
+        activo=True,
+        fecha_creacion=datetime.now(timezone.utc),
+    )
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return nuevo
+
+
 def run_seed() -> None:
     db = SessionLocal()
     try:
         print("Iniciando carga de datos de prueba (seed)...")
 
-        # 1. Categorías (mínimo 2)
+       
         cat_pc = get_or_create_categoria(
             db,
             nombre="PC Gama Alta",
@@ -106,26 +139,26 @@ def run_seed() -> None:
             descripcion="Consola PlayStation 5 con 2 mandos DualSense y TV 4K 120Hz",
             plataforma="Consola",
         )
-        print(f"✔ Categorías listas: IDs {cat_pc.id}, {cat_ps5.id}")
+        print(f"Categorías listas: IDs {cat_pc.id}, {cat_ps5.id}")
 
-        # 2. Clientes (mínimo 2)
+       
         cli_1 = get_or_create_cliente(
             db,
             correo="benito@gamer.cl",
             nombre="Benito Carbonell",
             telefono="+56911112222",
-            fecha_registro=datetime.now(),
+            fecha_registro=datetime.now(timezone.utc),
         )
         cli_2 = get_or_create_cliente(
             db,
             correo="joako@gamer.cl",
             nombre="Joaquín Pruebas",
             telefono="+56933334444",
-            fecha_registro=datetime.now(),
+            fecha_registro=datetime.now(timezone.utc),
         )
-        print(f"✔ Clientes listos: IDs {cli_1.id}, {cli_2.id}")
+        print(f"Clientes listos: IDs {cli_1.id}, {cli_2.id}")
 
-        # 3. Estaciones (mínimo 2: una disponible y una en_mantencion)
+        
         est_disponible = get_or_create_estacion(
             db,
             codigo="PC-01",
@@ -141,12 +174,11 @@ def run_seed() -> None:
             categoria_id=cat_ps5.id,
         )
         print(
-            f"✔ Estaciones listas: IDs {est_disponible.id} ({est_disponible.estado}), "
+            f"Estaciones listas: IDs {est_disponible.id} ({est_disponible.estado}), "
             f"{est_mantencion.id} ({est_mantencion.estado})"
         )
 
-        # 4. Reservas (mínimo 2, con costo coherente con tarifa_hora y duración del turno)
-        # Turno 10:00-12:00 (2 horas) en PC Gama Alta (4500/h) => costo = 9000.0
+       
         res_1 = get_or_create_reserva(
             db,
             cliente_id=cli_1.id,
@@ -156,7 +188,6 @@ def run_seed() -> None:
             estado="confirmada",
             costo=9000.0,
         )
-        # Turno 15:00-16:00 (1 hora) en PC Gama Alta (4500/h) => costo = 4500.0
         res_2 = get_or_create_reserva(
             db,
             cliente_id=cli_2.id,
@@ -166,7 +197,31 @@ def run_seed() -> None:
             estado="en_curso",
             costo=4500.0,
         )
-        print(f"✔ Reservas listas: IDs {res_1.id}, {res_2.id}")
+        print(f"Reservas listas: IDs {res_1.id}, {res_2.id}")
+
+        
+        pass_encargado = os.getenv("SEED_ENCARGADO_PASSWORD")
+        pass_cliente = os.getenv("SEED_CLIENTE_PASSWORD")
+        if not pass_encargado or not pass_cliente:
+            raise ValueError(
+                "Faltan SEED_ENCARGADO_PASSWORD o SEED_CLIENTE_PASSWORD en las variables de entorno."
+            )
+
+        usr_encargado = get_or_create_usuario(
+            db,
+            correo="encargado@gamer.cl",
+            password_plana=pass_encargado,
+            perfil=Perfil.ENCARGADO,
+            cliente_id=None,
+        )
+        usr_cliente = get_or_create_usuario(
+            db,
+            correo="joako@gamer.cl",
+            password_plana=pass_cliente,
+            perfil=Perfil.CLIENTE,
+            cliente_id=cli_2.id,
+        )
+        print(f"Usuarios demo listos: IDs {usr_encargado.id}, {usr_cliente.id}")
         print("Seed ejecutado exitosamente (idempotente).")
 
     except Exception as e:
