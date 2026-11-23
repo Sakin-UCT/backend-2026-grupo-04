@@ -1,11 +1,28 @@
 @baseUrl = http://127.0.0.1:8000
 
 ### ============================================================================
+### 0. LOGIN (Obtiene access_token para las rutas protegidas de /clientes)
+### ============================================================================
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "correo": "encargado@gamer.cl",
+  "password": "CambiarEstaClaveDemo123!"
+}
+
+###
+@token = {{login.response.body.access_token}}
+
+
+### ============================================================================
 ### 1. LISTAR CLIENTES (Verifica clientes iniciales del seed: IDs 1 y 2)
 ### Esperado: 200 OK
 ### ============================================================================
 GET {{baseUrl}}/clientes/
 Accept: application/json
+Authorization: Bearer {{token}}
 
 
 ### ============================================================================
@@ -14,6 +31,7 @@ Accept: application/json
 ### ============================================================================
 GET {{baseUrl}}/clientes/1
 Accept: application/json
+Authorization: Bearer {{token}}
 
 
 ### ============================================================================
@@ -22,6 +40,7 @@ Accept: application/json
 ### ============================================================================
 GET {{baseUrl}}/clientes/999
 Accept: application/json
+Authorization: Bearer {{token}}
 
 
 ### ============================================================================
@@ -30,6 +49,7 @@ Accept: application/json
 ### ============================================================================
 POST {{baseUrl}}/clientes/
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "nombre": "Camila Soto",
@@ -44,6 +64,7 @@ Content-Type: application/json
 ### ============================================================================
 POST {{baseUrl}}/clientes/
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "nombre": "Otro Benito",
@@ -58,6 +79,7 @@ Content-Type: application/json
 ### ============================================================================
 POST {{baseUrl}}/clientes/
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "nombre": "J",
@@ -70,8 +92,9 @@ Content-Type: application/json
 ### 7. ACTUALIZAR CLIENTE EXISTENTE (Actualiza el cliente ID 3 recién creado)
 ### Esperado: 200 OK
 ### ============================================================================
-PATCH  {{baseUrl}}/clientes/3
+PATCH {{baseUrl}}/clientes/3
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "nombre": "Camila Soto Actualizada",
@@ -86,6 +109,7 @@ Content-Type: application/json
 ### ============================================================================
 PATCH {{baseUrl}}/clientes/999
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "nombre": "Fantasma",
@@ -99,6 +123,7 @@ Content-Type: application/json
 ### Esperado: 409 Conflict (CONFLICT - No se puede borrar porque tiene reservas)
 ### ============================================================================
 DELETE {{baseUrl}}/clientes/1
+Authorization: Bearer {{token}}
 
 
 ### ============================================================================
@@ -106,6 +131,7 @@ DELETE {{baseUrl}}/clientes/1
 ### Esperado: 204 No Content
 ### ============================================================================
 DELETE {{baseUrl}}/clientes/3
+Authorization: Bearer {{token}}
 
 
 ### ============================================================================
@@ -113,3 +139,4 @@ DELETE {{baseUrl}}/clientes/3
 ### Esperado: 404 Not Found (RESOURCE_NOT_FOUND)
 ### ============================================================================
 DELETE {{baseUrl}}/clientes/999
+Authorization: Bearer {{token}}

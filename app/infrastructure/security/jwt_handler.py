@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 import jwt
 
 from app.domain.excepciones import NoAutenticadoError
-#javier debe subir su archivo
 
 ALGORITMO = "HS256"
 ACCESS_MINUTOS = 15
