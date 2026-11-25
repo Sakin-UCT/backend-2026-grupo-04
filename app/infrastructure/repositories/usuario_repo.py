@@ -1,52 +1,43 @@
-from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domain.excepciones import ConflictoError
 from app.domain.usuario import Usuario
-from app.infrastructure.mappers import usuario_mapper
+from app.infrastructure.mappers.usuario_mapper import a_dominio, a_modelo
 from app.infrastructure.models.usuario_model import UsuarioModel
 
 
 class UsuarioRepository:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session):
         self.db = db
 
     def crear(self, usuario: Usuario) -> Usuario:
-        modelo = usuario_mapper.a_modelo(usuario)
-        modelo.id = None
+        modelo = a_modelo(usuario)
         try:
             self.db.add(modelo)
             self.db.commit()
             self.db.refresh(modelo)
-        except IntegrityError as exc:
+            return a_dominio(modelo)
+        except IntegrityError:
             self.db.rollback()
-            raise ConflictoError("Ya existe un usuario registrado con ese correo") from exc
-        return usuario_mapper.a_dominio(modelo)
+            raise ConflictoError("El correo ya está registrado.")
 
     def buscar_por_correo(self, correo: str) -> Usuario | None:
-        stmt = select(UsuarioModel).where(UsuarioModel.correo == correo)
-        modelo = self.db.scalar(stmt)
-        if modelo is None:
-            return None
-        return usuario_mapper.a_dominio(modelo)
+        modelo = self.db.query(UsuarioModel).filter(UsuarioModel.correo == correo).first()
+        return a_dominio(modelo) if modelo else None
 
     def buscar_por_id(self, usuario_id: int) -> Usuario | None:
-        stmt = select(UsuarioModel).where(UsuarioModel.id == usuario_id)
-        modelo = self.db.scalar(stmt)
-        if modelo is None:
-            return None
-        return usuario_mapper.a_dominio(modelo)
+        modelo = self.db.query(UsuarioModel).filter(UsuarioModel.id == usuario_id).first()
+        return a_dominio(modelo) if modelo else None
 
-    def actualizar(self, usuario: Usuario) -> Usuario:
-        stmt = select(UsuarioModel).where(UsuarioModel.id == usuario.id)
-        modelo = self.db.scalar(stmt)
-        if modelo is None:
-            return usuario_mapper.a_dominio(usuario_mapper.a_modelo(usuario))
+    def actualizar(self, usuario: Usuario) -> Usuario | None:
+        modelo = self.db.query(UsuarioModel).filter(UsuarioModel.id == usuario.id).first()
+        if not modelo:
+            return None
 
         modelo.correo = usuario.correo
         modelo.password_hash = usuario.password_hash
-        modelo.perfil = usuario.perfil.value if hasattr(usuario.perfil, "value") else str(usuario.perfil)
+        modelo.perfil = usuario.perfil.value if hasattr(usuario.perfil, "value") else usuario.perfil
         modelo.cliente_id = usuario.cliente_id
         modelo.intentos_fallidos = usuario.intentos_fallidos
         modelo.bloqueado_hasta = usuario.bloqueado_hasta
@@ -55,7 +46,7 @@ class UsuarioRepository:
         try:
             self.db.commit()
             self.db.refresh(modelo)
-        except IntegrityError as exc:
+            return a_dominio(modelo)
+        except IntegrityError:
             self.db.rollback()
-            raise ConflictoError("Conflicto de integridad al actualizar el usuario") from exc
-        return usuario_mapper.a_dominio(modelo)
+            raise ConflictoError("Conflicto de integridad al actualizar el usuario.")
