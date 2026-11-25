@@ -8,9 +8,13 @@ LARGO_MAX_PASSWORD = 128
 
 def validar_password_segura(password: str):
     if len(password) < LARGO_MIN_PASSWORD:
-        raise ValueError(f"La contraseña debe tener al menos {LARGO_MIN_PASSWORD} caracteres.")
+        raise ValueError(
+            f"La contraseña debe tener al menos {LARGO_MIN_PASSWORD} caracteres."
+        )
     if len(password) > LARGO_MAX_PASSWORD:
-        raise ValueError(f"La contraseña no puede superar los {LARGO_MAX_PASSWORD} caracteres.")
+        raise ValueError(
+            f"La contraseña no puede superar los {LARGO_MAX_PASSWORD} caracteres."
+        )
     return password
 
 
@@ -25,7 +29,10 @@ class RegistroRequest(BaseModel):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "example": {"correo": "cliente@example.com", "password": "una-clave-larga-123"}
+            "example": {
+                "correo": "cliente@example.com",
+                "password": "una-clave-larga-123",
+            }
         }
     )
 
@@ -36,7 +43,10 @@ class LoginRequest(BaseModel):
 
     model_config = ConfigDict(
         json_schema_extra={
-            "example": {"correo": "cliente@example.com", "password": "una-clave-larga-123"}
+            "example": {
+                "correo": "cliente@example.com",
+                "password": "una-clave-larga-123",
+            }
         }
     )
 

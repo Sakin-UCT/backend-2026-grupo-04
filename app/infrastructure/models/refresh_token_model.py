@@ -15,7 +15,9 @@ class RefreshTokenModel(Base):
         nullable=False,
         index=True,
     )
-    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(
+        String(64), unique=True, nullable=False, index=True
+    )
     expira_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revocado: Mapped[bool] = mapped_column(
         Boolean,

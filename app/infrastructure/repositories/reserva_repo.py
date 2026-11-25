@@ -6,7 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.domain.excepciones import ConflictoError
 from app.domain.reserva import EstadoReserva, Reserva
-from app.infrastructure.mappers import reserva_to_domain, reserva_to_model
+from app.infrastructure.mappers.reserva_mapper import (
+    a_dominio as reserva_to_domain,
+    a_modelo as reserva_to_model,
+)
 from app.infrastructure.models.reserva_model import ReservaModel
 
 COLUMNAS_ORDENABLES = {

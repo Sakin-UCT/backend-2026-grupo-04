@@ -1,4 +1,5 @@
 import jwt
+import hashlib
 import pytest
 from datetime import datetime, timedelta, timezone
 
@@ -10,6 +11,11 @@ from app.infrastructure.security.jwt_handler import (
     decodificar_token_recuperacion,
 )
 from app.infrastructure.security.password import hashear_password, verificar_password
+from app.infrastructure.security.token_hash import (
+    generar_refresh_token,
+    hashear_refresh,
+)
+
 
 SECRETO = "secreto-de-prueba-con-mas-de-32-caracteres-ok"
 OTRO_SECRETO = "otro-secreto-distinto-con-mas-de-32-caracteres"
@@ -78,3 +84,18 @@ def test_jwt_rechazado_lanza_no_autenticado():
     token_sin_exp = jwt.encode(sin_exp, SECRETO, algorithm="HS256")
     with pytest.raises(NoAutenticadoError):
         decodificar_access_token(token_sin_exp)
+
+
+def test_refresh_token_opaco_y_hash_sha256():
+    token_a = generar_refresh_token()
+    token_b = generar_refresh_token()
+
+    assert token_a != token_b
+    assert len(token_a) >= 43
+
+    hash_a = hashear_refresh(token_a)
+    assert hash_a == hashlib.sha256(token_a.encode("utf-8")).hexdigest()
+    assert len(hash_a) == 64
+    assert hash_a != token_a
+    assert hashear_refresh(token_a) == hash_a
+    assert hashear_refresh(token_b) != hash_a
