@@ -25,7 +25,9 @@ class RefreshTokenRepository:
         return usuario_mapper.refresh_token_a_dominio(modelo)
 
     def buscar_por_hash(self, token_hash: str) -> RefreshToken | None:
-        stmt = select(RefreshTokenModel).where(RefreshTokenModel.token_hash == token_hash)
+        stmt = select(RefreshTokenModel).where(
+            RefreshTokenModel.token_hash == token_hash
+        )
         modelo = self.db.scalar(stmt)
         if modelo is None:
             return None

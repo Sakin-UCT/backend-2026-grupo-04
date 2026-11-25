@@ -17,6 +17,7 @@ pytestmark = [
     ),
 ]
 
+
 def _login(client: httpx.Client, correo: str, password: str) -> str:
     resp = client.post("/auth/login", json={"correo": correo, "password": password})
     assert resp.status_code == 200, f"Login fallido ({resp.status_code}): {resp.text}"
@@ -31,21 +32,23 @@ def test_patch_estacion_exige_perfil_encargado():
     with httpx.Client(base_url=API_BASE_URL.rstrip("/"), timeout=10.0) as client:
         token_encargado = _login(client, ENCARGADO_CORREO, ENCARGADO_PASSWORD)
 
-        #estacion existente y != de la actual
+        # estacion existente y != de la actual
         listado = client.get("/estaciones", headers=_bearer(token_encargado))
         assert listado.status_code == 200, listado.text
         assert listado.json(), "No hay estaciones cargadas: falta ejecutar el seeder."
         estacion = listado.json()[0]
         url = f"/estaciones/{estacion['id']}"
         estado_original = estacion["estado"]
-        estado_nuevo = "en_mantencion" if estado_original != "en_mantencion" else "disponible"
+        estado_nuevo = (
+            "en_mantencion" if estado_original != "en_mantencion" else "disponible"
+        )
         cuerpo = {"estado": estado_nuevo}
 
         # sin token: 401
         sin_token = client.patch(url, json=cuerpo)
         assert sin_token.status_code == 401, sin_token.text
 
-        #token recien registrado: 403
+        # token recien registrado: 403
         correo_cliente = f"e2e_permisos_{uuid.uuid4().hex[:12]}@gamer.cl"
         password_cliente = secrets.token_urlsafe(16)
         registro = client.post(
@@ -61,9 +64,11 @@ def test_patch_estacion_exige_perfil_encargado():
         intacta = client.get(url, headers=_bearer(token_encargado))
         assert intacta.json()["estado"] == estado_original
 
-        #token del encargado: 200 y si cambia
+        # token del encargado: 200 y si cambia
         try:
-            como_encargado = client.patch(url, json=cuerpo, headers=_bearer(token_encargado))
+            como_encargado = client.patch(
+                url, json=cuerpo, headers=_bearer(token_encargado)
+            )
             assert como_encargado.status_code == 200, como_encargado.text
             assert como_encargado.json()["estado"] == estado_nuevo
 
@@ -71,5 +76,7 @@ def test_patch_estacion_exige_perfil_encargado():
             assert verificada.status_code == 200, verificada.text
             assert verificada.json()["estado"] == estado_nuevo
         finally:
-            #se deja la estacion como estaba
-            client.patch(url, json={"estado": estado_original}, headers=_bearer(token_encargado))
+            # se deja la estacion como estaba
+            client.patch(
+                url, json={"estado": estado_original}, headers=_bearer(token_encargado)
+            )
