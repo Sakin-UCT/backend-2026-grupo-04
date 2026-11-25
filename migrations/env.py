@@ -8,15 +8,6 @@ from alembic import context
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.infrastructure.database import Base
-from app.infrastructure.models import (
-    cliente_model,
-    categoria_model,
-    estacion_model,
-    reserva_model,
-    usuario_model,
-    refresh_token_model,
-    token_recuperacion_model,
-)
 
 load_dotenv()
 

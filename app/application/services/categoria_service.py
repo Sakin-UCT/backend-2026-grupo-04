@@ -1,5 +1,5 @@
 from app.domain.categoria import Categoria
-from app.domain.excepciones import RecursoNoEncontradoError, ConflictoError
+from app.domain.excepciones import RecursoNoEncontradoError
 
 
 class CategoriaService:
