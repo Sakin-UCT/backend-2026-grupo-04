@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from app.infrastructure.models.cliente_model import ClienteModel
 from app.domain.cliente import Cliente
 from app.domain.excepciones import ConflictoError
-from app.infrastructure.mappers import cliente_to_domain, cliente_to_model
+from app.infrastructure.mappers.categoria_mapper import categoria_to_domain, categoria_to_model
 
 
 class ClienteRepository:
