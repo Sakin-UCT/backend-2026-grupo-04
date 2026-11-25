@@ -21,7 +21,6 @@ DIRECCIONES = ("asc", "desc")
 
 
 class ReservaRepository:
-
     def __init__(self, db: Session):
         self.db = db
 
@@ -86,7 +85,9 @@ class ReservaRepository:
     ) -> tuple[list[Reserva], int]:
         columna = COLUMNAS_ORDENABLES.get(ordenar_por or "id")
         if columna is None:
-            raise ValueError(f"ordenar_por debe ser uno de {sorted(COLUMNAS_ORDENABLES)}")
+            raise ValueError(
+                f"ordenar_por debe ser uno de {sorted(COLUMNAS_ORDENABLES)}"
+            )
         if direccion not in DIRECCIONES:
             raise ValueError("direccion debe ser 'asc' o 'desc'")
         if pagina < 1 or limite < 1:
@@ -96,9 +97,12 @@ class ReservaRepository:
         if fecha is not None:
             filtros.append(ReservaModel.fecha == fecha)
 
-        total = self.db.scalar(
-            select(func.count()).select_from(ReservaModel).where(*filtros)
-        ) or 0
+        total = (
+            self.db.scalar(
+                select(func.count()).select_from(ReservaModel).where(*filtros)
+            )
+            or 0
+        )
 
         orden = [columna.desc() if direccion == "desc" else columna.asc()]
         if columna is not ReservaModel.id:

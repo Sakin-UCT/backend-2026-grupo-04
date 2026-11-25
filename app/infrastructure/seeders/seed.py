@@ -124,7 +124,6 @@ def run_seed() -> None:
     try:
         print("Iniciando carga de datos de prueba (seed)...")
 
-       
         cat_pc = get_or_create_categoria(
             db,
             nombre="PC Gama Alta",
@@ -141,7 +140,6 @@ def run_seed() -> None:
         )
         print(f"Categorías listas: IDs {cat_pc.id}, {cat_ps5.id}")
 
-       
         cli_1 = get_or_create_cliente(
             db,
             correo="benito@gamer.cl",
@@ -158,7 +156,6 @@ def run_seed() -> None:
         )
         print(f"Clientes listos: IDs {cli_1.id}, {cli_2.id}")
 
-        
         est_disponible = get_or_create_estacion(
             db,
             codigo="PC-01",
@@ -178,7 +175,6 @@ def run_seed() -> None:
             f"{est_mantencion.id} ({est_mantencion.estado})"
         )
 
-       
         res_1 = get_or_create_reserva(
             db,
             cliente_id=cli_1.id,
@@ -199,7 +195,6 @@ def run_seed() -> None:
         )
         print(f"Reservas listas: IDs {res_1.id}, {res_2.id}")
 
-        
         pass_encargado = os.getenv("SEED_ENCARGADO_PASSWORD")
         pass_cliente = os.getenv("SEED_CLIENTE_PASSWORD")
         if not pass_encargado or not pass_cliente:

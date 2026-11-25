@@ -1,13 +1,18 @@
 from pydantic import BaseModel, ConfigDict, Field
 from app.domain.estacion import EstadoEstacion
 
-class EstacionCreate(BaseModel):
 
+class EstacionCreate(BaseModel):
     model_config = ConfigDict(
         str_strip_whitespace=True,
         json_schema_extra={
             "examples": [
-                {"codigo": "PC-01", "ubicacion": "Sala principal, fila A", "categoria_id": 1}]
+                {
+                    "codigo": "PC-01",
+                    "ubicacion": "Sala principal, fila A",
+                    "categoria_id": 1,
+                }
+            ]
         },
     )
 
@@ -23,8 +28,8 @@ class EstacionCreate(BaseModel):
     )
     categoria_id: int = Field(gt=0, description="Id de la categoría de la estación.")
 
-class EstacionUpdate(BaseModel):
 
+class EstacionUpdate(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={"examples": [{"estado": "en_mantencion"}]},
     )
@@ -33,8 +38,8 @@ class EstacionUpdate(BaseModel):
         description="Nuevo estado: disponible, en_mantencion o fuera_de_servicio."
     )
 
-class EstacionResponse(BaseModel):
 
+class EstacionResponse(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
         json_schema_extra={
@@ -45,7 +50,8 @@ class EstacionResponse(BaseModel):
                     "ubicacion": "Sala principal, fila A",
                     "estado": "disponible",
                     "categoria_id": 1,
-                }]
+                }
+            ]
         },
     )
 

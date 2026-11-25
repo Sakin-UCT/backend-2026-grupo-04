@@ -3,22 +3,27 @@ class DominioError(Exception):
         self.mensaje = mensaje
         super().__init__(mensaje)
 
+
 class RecursoNoEncontradoError(DominioError):
-    #recurso no encontrado 
+    # recurso no encontrado
     pass
+
 
 class ReglaNegocioError(DominioError):
-    #violacion de reglas de negocio
+    # violacion de reglas de negocio
     pass
+
 
 class ConflictoError(DominioError):
-    #violacion de regla duplicidad
+    # violacion de regla duplicidad
     pass
+
 
 class NoAutenticadoError(DominioError):
-    #usuario no autenticado
+    # usuario no autenticado
     pass
 
+
 class SinPermisoError(DominioError):
-    #usuario sin permiso
+    # usuario sin permiso
     pass

@@ -3,7 +3,10 @@ from sqlalchemy.exc import IntegrityError
 from app.infrastructure.models.cliente_model import ClienteModel
 from app.domain.cliente import Cliente
 from app.domain.excepciones import ConflictoError
-from app.infrastructure.mappers.cliente_mapper import cliente_to_domain, cliente_to_model
+from app.infrastructure.mappers.cliente_mapper import (
+    cliente_to_domain,
+    cliente_to_model,
+)
 
 
 class ClienteRepository:
@@ -15,7 +18,9 @@ class ClienteRepository:
         return [cliente_to_domain(m) for m in modelos]
 
     def obtener_por_id(self, cliente_id: int) -> Cliente | None:
-        modelo = self.db.query(ClienteModel).filter(ClienteModel.id == cliente_id).first()
+        modelo = (
+            self.db.query(ClienteModel).filter(ClienteModel.id == cliente_id).first()
+        )
         return cliente_to_domain(modelo) if modelo else None
 
     def guardar(self, cliente: Cliente) -> Cliente:
@@ -30,7 +35,9 @@ class ClienteRepository:
             raise ConflictoError("El correo ya está registrado.")
 
     def actualizar(self, cliente: Cliente) -> Cliente | None:
-        modelo = self.db.query(ClienteModel).filter(ClienteModel.id == cliente.id).first()
+        modelo = (
+            self.db.query(ClienteModel).filter(ClienteModel.id == cliente.id).first()
+        )
         if not modelo:
             return None
 
@@ -47,7 +54,9 @@ class ClienteRepository:
             raise ConflictoError("El correo ya pertenece a otro cliente.")
 
     def eliminar(self, cliente_id: int) -> bool:
-        modelo = self.db.query(ClienteModel).filter(ClienteModel.id == cliente_id).first()
+        modelo = (
+            self.db.query(ClienteModel).filter(ClienteModel.id == cliente_id).first()
+        )
         if not modelo:
             return False
         try:
@@ -56,4 +65,6 @@ class ClienteRepository:
             return True
         except IntegrityError:
             self.db.rollback()
-            raise ConflictoError("No se puede eliminar el cliente porque tiene reservas asociadas.")
+            raise ConflictoError(
+                "No se puede eliminar el cliente porque tiene reservas asociadas."
+            )

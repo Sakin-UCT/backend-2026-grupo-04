@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy.orm import Session
 from app.presentation.dependencies import get_db
-from app.presentation.schemas.estacion_schema import EstacionCreate, EstacionUpdate, EstacionResponse
+from app.presentation.schemas.estacion_schema import (
+    EstacionCreate,
+    EstacionUpdate,
+    EstacionResponse,
+)
 from app.application.services.estacion_service import EstacionService
 from app.infrastructure.repositories.estacion_repo import EstacionRepository
 from app.infrastructure.repositories.categoria_repo import CategoriaRepository
@@ -22,7 +26,7 @@ def get_estacion_service(db: Session = Depends(get_db)):
     response_model=EstacionResponse,
     summary="Crear una estación",
     description="Registra una estación nueva asociada a una categoría existente. "
-                "Queda disponible por defecto.",
+    "Queda disponible por defecto.",
     responses={
         404: {"description": "La categoría indicada no existe"},
         409: {"description": "Ya existe una estación con ese código"},

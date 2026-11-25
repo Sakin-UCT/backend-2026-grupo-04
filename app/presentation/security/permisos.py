@@ -18,7 +18,9 @@ def requiere_perfil(*perfiles: str | Perfil) -> Callable[[Usuario], Usuario]:
             else str(usuario.perfil)
         )
         if perfil_usuario not in perfiles_permitidos:
-            raise SinPermisoError("No tienes permisos suficientes para realizar esta operación.")
+            raise SinPermisoError(
+                "No tienes permisos suficientes para realizar esta operación."
+            )
         return usuario
 
     return _validador

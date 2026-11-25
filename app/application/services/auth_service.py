@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Callable
-from app.domain.excepciones import (ConflictoError, NoAutenticadoError, ReglaNegocioError,)
+from app.domain.excepciones import (
+    ConflictoError,
+    NoAutenticadoError,
+    ReglaNegocioError,
+)
 from app.domain.usuario import Perfil, RefreshToken, Usuario
 
 MAX_INTENTOS = 5
@@ -39,7 +43,9 @@ class AuthService:
 
     def registrar(self, correo: str, password: str) -> Usuario:
         if len(password) < LARGO_MIN_PASSWORD:
-            raise ReglaNegocioError(f"La contraseña debe tener mínimo {LARGO_MIN_PASSWORD} caracteres")
+            raise ReglaNegocioError(
+                f"La contraseña debe tener mínimo {LARGO_MIN_PASSWORD} caracteres"
+            )
         existen = self.usuario_repo.buscar_por_correo(correo)
         if existen:
             raise ConflictoError("El correo ya está registrado")
@@ -49,7 +55,6 @@ class AuthService:
             perfil=Perfil.CLIENTE,
         )
         return self.usuario_repo.crear(usuario)
-
 
     def login(self, correo: str, password: str) -> Sesion:
         usuario = self.usuario_repo.buscar_por_correo(correo)
@@ -72,7 +77,6 @@ class AuthService:
 
         return self._emitir_sesion(usuario)
 
-
     def refrescar(self, refresh_token: str) -> Sesion:
         h = self.seguridad.hashear_refresh(refresh_token)
         token = self.refresh_repo.buscar_por_hash(h)
@@ -91,7 +95,6 @@ class AuthService:
         self.refresh_repo.revocar(token.id, reemplazado_por=nueva.refresh_id)
         return nueva
 
-
     def logout(self, refresh_token: str | None) -> None:
         if not refresh_token:
             return
@@ -102,13 +105,11 @@ class AuthService:
         if token and not token.revocado:
             self.refresh_repo.revocar(token.id)
 
-
     def me(self, usuario_id: int) -> Usuario:
         usuario = self.usuario_repo.buscar_por_id(usuario_id)
         if not usuario or not usuario.activo:
             raise NoAutenticadoError(MSG_CREDENCIALES)
         return usuario
-
 
     def _emitir_sesion(self, usuario: Usuario) -> Sesion:
         claro = self.seguridad.generar_refresh_token()

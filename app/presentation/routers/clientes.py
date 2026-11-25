@@ -99,7 +99,9 @@ def actualizar_cliente(
     responses={
         204: {"description": "Cliente eliminado exitosamente (sin contenido)"},
         404: {"description": "Cliente no encontrado"},
-        409: {"description": "Conflicto: no se puede eliminar un cliente con reservas asociadas"},
+        409: {
+            "description": "Conflicto: no se puede eliminar un cliente con reservas asociadas"
+        },
     },
 )
 def eliminar_cliente(

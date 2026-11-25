@@ -3,7 +3,10 @@ from sqlalchemy.exc import IntegrityError
 from app.infrastructure.models.categoria_model import CategoriaModel
 from app.domain.categoria import Categoria
 from app.domain.excepciones import ConflictoError
-from app.infrastructure.mappers.categoria_mapper import categoria_to_domain, categoria_to_model
+from app.infrastructure.mappers.categoria_mapper import (
+    categoria_to_domain,
+    categoria_to_model,
+)
 
 
 class CategoriaRepository:
@@ -18,7 +21,11 @@ class CategoriaRepository:
     obtener_todas = obtener_todos
 
     def obtener_por_id(self, categoria_id: int) -> Categoria | None:
-        modelo = self.db.query(CategoriaModel).filter(CategoriaModel.id == categoria_id).first()
+        modelo = (
+            self.db.query(CategoriaModel)
+            .filter(CategoriaModel.id == categoria_id)
+            .first()
+        )
         return categoria_to_domain(modelo) if modelo else None
 
     def guardar(self, categoria: Categoria) -> Categoria:

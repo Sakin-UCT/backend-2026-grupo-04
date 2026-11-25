@@ -23,7 +23,9 @@ def a_modelo(entidad: Usuario) -> UsuarioModel:
         id=entidad.id,
         correo=entidad.correo,
         password_hash=entidad.password_hash,
-        perfil=entidad.perfil.value if isinstance(entidad.perfil, Perfil) else str(entidad.perfil),
+        perfil=entidad.perfil.value
+        if isinstance(entidad.perfil, Perfil)
+        else str(entidad.perfil),
         cliente_id=entidad.cliente_id,
         intentos_fallidos=entidad.intentos_fallidos,
         bloqueado_hasta=entidad.bloqueado_hasta,

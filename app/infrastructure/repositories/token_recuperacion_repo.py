@@ -43,7 +43,9 @@ class TokenRecuperacionRepository:
             return _a_dominio(modelo)
         except IntegrityError as err:
             self.db.rollback()
-            raise ConflictoError("Token de recuperación duplicado o usuario inválido.") from err
+            raise ConflictoError(
+                "Token de recuperación duplicado o usuario inválido."
+            ) from err
 
     def marcar_usado(self, token_hash: str) -> bool:
         ahora = datetime.now(timezone.utc)

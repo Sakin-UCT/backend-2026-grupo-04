@@ -17,7 +17,8 @@ class EstacionRepository:
 
     def obtener_todos(self):
         modelos = self.db.scalars(
-            select(EstacionModel).order_by(EstacionModel.id)).all()
+            select(EstacionModel).order_by(EstacionModel.id)
+        ).all()
         return [estacion_to_domain(m) for m in modelos]
 
     def obtener_por_id(self, estacion_id: int):

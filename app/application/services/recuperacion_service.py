@@ -11,9 +11,7 @@ from app.infrastructure.security.jwt_handler import (
 from app.infrastructure.security.password import hashear_password
 from app.infrastructure.security.token_hash import hashear_refresh
 
-MENSAJE_SOLICITUD_GENERICO = (
-    "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña."
-)
+MENSAJE_SOLICITUD_GENERICO = "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña."
 MENSAJE_RESTABLECER_OK = "Contraseña actualizada correctamente."
 
 
@@ -59,18 +57,24 @@ class RecuperacionService:
 
     def restablecer(self, token: str, nueva_password: str) -> dict[str, str]:
         if len(nueva_password) < 12:
-            raise ReglaNegocioError("La contraseña no cumple con la política de seguridad.")
+            raise ReglaNegocioError(
+                "La contraseña no cumple con la política de seguridad."
+            )
 
         try:
             payload = decodificar_token_recuperacion(token)
             usuario_id = int(payload["sub"])
         except (NoAutenticadoError, KeyError, TypeError, ValueError) as err:
-            raise ReglaNegocioError("El enlace de recuperación es inválido o ha expirado.") from err
+            raise ReglaNegocioError(
+                "El enlace de recuperación es inválido o ha expirado."
+            ) from err
 
         token_hash = hashear_refresh(token)
         marcado = self.token_recuperacion_repo.marcar_usado(token_hash)
         if not marcado:
-            raise ReglaNegocioError("El enlace de recuperación es inválido o ha expirado.")
+            raise ReglaNegocioError(
+                "El enlace de recuperación es inválido o ha expirado."
+            )
 
         usuario = self.usuario_repo.buscar_por_id(usuario_id)
         if usuario is None or not usuario.activo:

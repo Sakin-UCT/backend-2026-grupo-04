@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Float, Integer, String
 from app.infrastructure.database import Base
 
+
 class CategoriaModel(Base):
     __tablename__ = "categorias_estacion"
 

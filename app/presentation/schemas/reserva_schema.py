@@ -14,12 +14,11 @@ EJEMPLO_RESERVA = {
 
 
 class ReservaCreate(BaseModel):
-
     cliente_id: int = Field(gt=0)
     estacion_id: int = Field(gt=0)
     fecha: date
     turno: str = Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$")
-    #formato HH:MM-HH:MM con horas 00-23 y minutos 00-59
+    # formato HH:MM-HH:MM con horas 00-23 y minutos 00-59
 
     @field_validator("turno")
     @classmethod
@@ -32,18 +31,23 @@ class ReservaCreate(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
-                {"cliente_id": 1, "estacion_id": 1, "fecha": "2026-11-05", "turno": "10:00-11:00"}
-            ]}
+                {
+                    "cliente_id": 1,
+                    "estacion_id": 1,
+                    "fecha": "2026-11-05",
+                    "turno": "10:00-11:00",
+                }
+            ]
+        }
     )
 
 
 class ReservaUpdate(BaseModel):
-    
     estado: EstadoReserva
     model_config = ConfigDict(json_schema_extra={"examples": [{"estado": "en_curso"}]})
 
-class ReservaResponse(BaseModel):
 
+class ReservaResponse(BaseModel):
     id: int
     cliente_id: int
     estacion_id: int
@@ -52,11 +56,13 @@ class ReservaResponse(BaseModel):
     estado: EstadoReserva
     costo: float
 
-    model_config = ConfigDict(from_attributes=True, json_schema_extra={"examples": [EJEMPLO_RESERVA]})
+    model_config = ConfigDict(
+        from_attributes=True, json_schema_extra={"examples": [EJEMPLO_RESERVA]}
+    )
 
 
 class ReservaPaginada(BaseModel):
-#respuesta de GET /reservas
+    # respuesta de GET /reservas
 
     items: list[ReservaResponse]
     total: int
@@ -73,6 +79,7 @@ class ReservaPaginada(BaseModel):
                     "pagina": 1,
                     "limite": 20,
                     "total_paginas": 1,
-                }]
+                }
+            ]
         }
     )

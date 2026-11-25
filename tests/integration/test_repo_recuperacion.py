@@ -7,7 +7,9 @@ from sqlalchemy.orm import sessionmaker
 from app.domain.usuario import Perfil, TokenRecuperacion
 from app.infrastructure.models.token_recuperacion_model import TokenRecuperacionModel
 from app.infrastructure.models.usuario_model import UsuarioModel
-from app.infrastructure.repositories.token_recuperacion_repo import TokenRecuperacionRepository
+from app.infrastructure.repositories.token_recuperacion_repo import (
+    TokenRecuperacionRepository,
+)
 
 DB_URL = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
 

@@ -23,7 +23,9 @@ class ClienteService:
     def obtener(self, cliente_id: int) -> Cliente:
         cliente = self.repo.obtener_por_id(cliente_id)
         if cliente is None:
-            raise RecursoNoEncontradoError(f"No existe un cliente con el ID {cliente_id}")
+            raise RecursoNoEncontradoError(
+                f"No existe un cliente con el ID {cliente_id}"
+            )
         return cliente
 
     def actualizar(self, cliente_id: int, datos) -> Cliente:
@@ -39,7 +41,9 @@ class ClienteService:
 
         resultado = self.repo.actualizar(cliente_actualizado)
         if resultado is None:
-            raise RecursoNoEncontradoError(f"No existe un cliente con el ID {cliente_id}")
+            raise RecursoNoEncontradoError(
+                f"No existe un cliente con el ID {cliente_id}"
+            )
         return resultado
 
     def eliminar(self, cliente_id: int) -> None:

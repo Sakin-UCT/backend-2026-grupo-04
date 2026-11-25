@@ -26,7 +26,9 @@ def get_usuario_actual(
     try:
         usuario_id = int(sub)
     except (TypeError, ValueError) as err:
-        raise NoAutenticadoError("Identificador de usuario inválido en el token.") from err
+        raise NoAutenticadoError(
+            "Identificador de usuario inválido en el token."
+        ) from err
 
     repo = UsuarioRepository(db)
     usuario = repo.buscar_por_id(usuario_id)

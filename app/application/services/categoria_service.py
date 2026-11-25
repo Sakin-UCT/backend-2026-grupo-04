@@ -22,5 +22,7 @@ class CategoriaService:
     def obtener(self, categoria_id: int) -> Categoria:
         categoria = self.repo.obtener_por_id(categoria_id)
         if categoria is None:
-            raise RecursoNoEncontradoError(f"No existe una categoría con el ID {categoria_id}")
+            raise RecursoNoEncontradoError(
+                f"No existe una categoría con el ID {categoria_id}"
+            )
         return categoria
