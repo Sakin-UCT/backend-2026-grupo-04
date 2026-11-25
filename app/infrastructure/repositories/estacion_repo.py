@@ -4,7 +4,10 @@ from sqlalchemy.orm import Session
 
 from app.domain.estacion import Estacion, EstadoEstacion
 from app.domain.excepciones import ConflictoError
-from app.infrastructure.mappers import estacion_to_domain, estacion_to_model
+from app.infrastructure.mappers.estacion_mapper import (
+    a_dominio as estacion_to_domain,
+    a_modelo as estacion_to_model,
+)
 from app.infrastructure.models.estacion_model import EstacionModel
 
 
