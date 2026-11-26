@@ -11,19 +11,39 @@ from sqlalchemy import text
 RAIZ = Path(__file__).resolve().parent.parent
 
 # 1. Apuntar la app a la BD de prueba, nunca a la de desarrollo
+URL_DESARROLLO = os.environ.get("DATABASE_URL")
 URL_PRUEBA = os.environ.get("TEST_DATABASE_URL")
 if not URL_PRUEBA:
     raise RuntimeError("Falta TEST_DATABASE_URL en el entorno")
+if URL_PRUEBA == URL_DESARROLLO:
+    raise RuntimeError("TEST_DATABASE_URL no puede ser igual a DATABASE_URL")
 os.environ["DATABASE_URL"] = URL_PRUEBA
 os.environ.setdefault("JWT_SECRET", "solo-para-pruebas")
-
 # 2. Guardia: la limpieza borra datos, así que nunca debe correr sobre una BD ajena
 NOMBRE_BD = URL_PRUEBA.rsplit("/", 1)[-1]
-if "test" not in NOMBRE_BD:  # TODO: confirmar la regla del nombre con el grupo
+if "test" not in NOMBRE_BD:
     raise RuntimeError(f"'{NOMBRE_BD}' no parece una BD de prueba")
 
 from app.infrastructure.database import SessionLocal, engine  # noqa: E402
+from app.infrastructure.models import (  # noqa: E402
+    categoria_model,
+    cliente_model,
+    estacion_model,
+    refresh_token_model,
+    reserva_model,
+    token_recuperacion_model,
+    usuario_model,
+)
 
+MODELOS_REGISTRADOS = (
+    categoria_model,
+    cliente_model,
+    estacion_model,
+    refresh_token_model,
+    reserva_model,
+    token_recuperacion_model,
+    usuario_model,
+)
 
 @pytest.fixture(scope="session")
 def bd_migrada():
@@ -51,7 +71,7 @@ def _vaciar_tablas():
 
 
 @pytest.fixture
-def sesion_bd(bd_migrada):
+def db_session(bd_migrada):
     """Sesión nueva por prueba. Al terminar, cierra y vacía la BD."""
     sesion = SessionLocal()
     try:
@@ -59,7 +79,6 @@ def sesion_bd(bd_migrada):
     finally:
         sesion.close()  # soltar locks antes de truncar
         _vaciar_tablas()
-
 
 @pytest.fixture
 def cliente_api():
