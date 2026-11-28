@@ -8,6 +8,7 @@ def a_dominio(modelo: ClienteModel) -> Cliente:
         nombre=modelo.nombre,
         correo=modelo.correo,
         telefono=modelo.telefono,
+        fecha_registro=modelo.fecha_registro,
     )
 
 
@@ -17,4 +18,5 @@ def a_modelo(entidad: Cliente) -> ClienteModel:
         nombre=entidad.nombre,
         correo=entidad.correo,
         telefono=entidad.telefono,
+        fecha_registro=entidad.fecha_registro,
     )
