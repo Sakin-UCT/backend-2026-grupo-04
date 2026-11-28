@@ -1,16 +1,17 @@
 from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy.orm import Session
-from app.presentation.dependencies import get_db
-from app.presentation.schemas.estacion_schema import EstacionCreate, EstacionUpdate, EstacionResponse
 from app.application.services.estacion_service import EstacionService
-from app.infrastructure.repositories.estacion_repo import EstacionRepository
 from app.infrastructure.repositories.categoria_repo import CategoriaRepository
+from app.infrastructure.repositories.estacion_repo import EstacionRepository
+from app.presentation.dependencies import get_db
+from app.presentation.schemas.estacion_schema import EstacionCreate, EstacionResponse, EstacionUpdate
+from app.presentation.security.permisos import requiere_perfil
+from app.presentation.security.usuario_actual import get_usuario_actual
 
 router = APIRouter(prefix="/estaciones", tags=["Estaciones"])
 
 
 def get_estacion_service(db: Session = Depends(get_db)):
-    # Se arma uno nuevo por solicitud: cada una trae su propia sesión de BD
     estacion_repo = EstacionRepository(db)
     categoria_repo = CategoriaRepository(db)
     return EstacionService(estacion_repo, categoria_repo)
@@ -20,10 +21,12 @@ def get_estacion_service(db: Session = Depends(get_db)):
     "",
     status_code=status.HTTP_201_CREATED,
     response_model=EstacionResponse,
+    dependencies=[Depends(get_usuario_actual)],
     summary="Crear una estación",
     description="Registra una estación nueva asociada a una categoría existente. "
-                "Queda disponible por defecto.",
+    "Queda disponible por defecto.",
     responses={
+        401: {"description": "Usuario no autenticado"},
         404: {"description": "La categoría indicada no existe"},
         409: {"description": "Ya existe una estación con ese código"},
         422: {"description": "Datos inválidos"},
@@ -63,9 +66,12 @@ def obtener_estacion(
 @router.patch(
     "/{estacion_id}",
     response_model=EstacionResponse,
+    dependencies=[Depends(requiere_perfil("encargado"))],
     summary="Cambiar el estado de una estación",
     description="Marca la estación como disponible, en mantención o fuera de servicio.",
     responses={
+        401: {"description": "Usuario no autenticado"},
+        403: {"description": "Permisos insuficientes"},
         404: {"description": "La estación no existe"},
         422: {"description": "Estado inválido"},
     },
