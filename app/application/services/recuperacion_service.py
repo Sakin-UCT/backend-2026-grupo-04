@@ -1,5 +1,6 @@
-from datetime import datetime, timedelta, timezone
 import os
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.domain.excepciones import NoAutenticadoError, ReglaNegocioError
@@ -11,10 +12,10 @@ from app.infrastructure.security.jwt_handler import (
 from app.infrastructure.security.password import hashear_password
 from app.infrastructure.security.token_hash import hashear_refresh
 
-MENSAJE_SOLICITUD_GENERICO = (
-    "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña."
-)
+MENSAJE_SOLICITUD_GENERICO = "Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña."
 MENSAJE_RESTABLECER_OK = "Contraseña actualizada correctamente."
+MAX_SOLICITUDES_VENTANA = 3
+VENTANA_MINUTOS = 15
 
 
 class RecuperacionService:
@@ -30,47 +31,70 @@ class RecuperacionService:
         self.refresh_repo = refresh_repo
         self.enviador = enviador
 
-    def solicitar(self, correo: str) -> dict[str, str | None]:
+    def solicitar(
+        self,
+        correo: str,
+        programar_envio: Callable[..., Any] | None = None,
+    ) -> dict[str, str | None]:
         usuario = self.usuario_repo.buscar_por_correo(correo)
         token_debug: str | None = None
+        ahora = datetime.now(UTC)
 
-        if usuario is not None and usuario.activo and usuario.id is not None:
-            ahora = datetime.now(timezone.utc)
-            self.token_recuperacion_repo.invalidar_pendientes(usuario.id)
+        if usuario is None or not usuario.activo or usuario.id is None:
+            hashear_refresh(f"dummy:{correo}:{ahora.timestamp()}")
+            return {"mensaje": MENSAJE_SOLICITUD_GENERICO, "token_debug": None}
 
-            token_plano = crear_token_recuperacion(usuario.id)
-            token_hash = hashear_refresh(token_plano)
+        desde = ahora - timedelta(minutes=VENTANA_MINUTOS)
+        recientes = self.token_recuperacion_repo.contar_recientes(usuario.id, desde)
+        if recientes >= MAX_SOLICITUDES_VENTANA:
+            return {"mensaje": MENSAJE_SOLICITUD_GENERICO, "token_debug": None}
 
-            entidad_token = TokenRecuperacion(
-                usuario_id=usuario.id,
-                token_hash=token_hash,
-                expira_en=ahora + timedelta(minutes=15),
-                usado=False,
-                creado_en=ahora,
+        self.token_recuperacion_repo.invalidar_pendientes(usuario.id)
+
+        token_plano = crear_token_recuperacion(usuario.id)
+        token_hash = hashear_refresh(token_plano)
+
+        entidad_token = TokenRecuperacion(
+            usuario_id=usuario.id,
+            token_hash=token_hash,
+            expira_en=ahora + timedelta(minutes=VENTANA_MINUTOS),
+            usado=False,
+            creado_en=ahora,
+        )
+        self.token_recuperacion_repo.crear(entidad_token)
+
+        if programar_envio is not None:
+            programar_envio(
+                self.enviador.enviar_recuperacion, usuario.correo, token_plano
             )
-            self.token_recuperacion_repo.crear(entidad_token)
+        else:
             self.enviador.enviar_recuperacion(usuario.correo, token_plano)
 
-            entorno = os.getenv("APP_ENV", os.getenv("ENV", "dev")).lower()
-            if entorno in {"dev", "development", "test"}:
-                token_debug = token_plano
+        if os.getenv("RECUPERACION_DEV_JSON", "false").lower() == "true":
+            token_debug = token_plano
 
         return {"mensaje": MENSAJE_SOLICITUD_GENERICO, "token_debug": token_debug}
 
     def restablecer(self, token: str, nueva_password: str) -> dict[str, str]:
         if len(nueva_password) < 12:
-            raise ReglaNegocioError("La contraseña no cumple con la política de seguridad.")
+            raise ReglaNegocioError(
+                "La contraseña no cumple con la política de seguridad."
+            )
 
         try:
             payload = decodificar_token_recuperacion(token)
             usuario_id = int(payload["sub"])
         except (NoAutenticadoError, KeyError, TypeError, ValueError) as err:
-            raise ReglaNegocioError("El enlace de recuperación es inválido o ha expirado.") from err
+            raise ReglaNegocioError(
+                "El enlace de recuperación es inválido o ha expirado."
+            ) from err
 
         token_hash = hashear_refresh(token)
         marcado = self.token_recuperacion_repo.marcar_usado(token_hash)
         if not marcado:
-            raise ReglaNegocioError("El enlace de recuperación es inválido o ha expirado.")
+            raise ReglaNegocioError(
+                "El enlace de recuperación es inválido o ha expirado."
+            )
 
         usuario = self.usuario_repo.buscar_por_id(usuario_id)
         if usuario is None or not usuario.activo:

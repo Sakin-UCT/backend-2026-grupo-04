@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.application.services.cliente_service import ClienteService
+from app.domain.usuario import Usuario
 from app.infrastructure.repositories.cliente_repo import ClienteRepository
 from app.presentation.dependencies import get_db
 from app.presentation.schemas.cliente_schema import (
@@ -9,6 +10,7 @@ from app.presentation.schemas.cliente_schema import (
     ClienteResponse,
     ClienteUpdate,
 )
+from app.presentation.security.usuario_actual import get_usuario_actual
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
@@ -25,6 +27,7 @@ def get_cliente_service(db: Session = Depends(get_db)) -> ClienteService:
     description="Crea un nuevo cliente en el sistema validando que su correo electrónico sea único.",
     responses={
         201: {"description": "Cliente creado exitosamente"},
+        401: {"description": "No autenticado"},
         409: {"description": "Conflicto: el correo electrónico ya está registrado"},
         422: {"description": "Error de validación en los datos enviados"},
     },
@@ -32,6 +35,7 @@ def get_cliente_service(db: Session = Depends(get_db)) -> ClienteService:
 def crear_cliente(
     datos: ClienteCreate,
     service: ClienteService = Depends(get_cliente_service),
+    _usuario: Usuario = Depends(get_usuario_actual),
 ):
     return service.crear(datos)
 
@@ -44,10 +48,12 @@ def crear_cliente(
     description="Obtiene la lista completa de clientes registrados en el centro gamer.",
     responses={
         200: {"description": "Lista de clientes obtenida exitosamente"},
+        401: {"description": "No autenticado"},
     },
 )
 def listar_clientes(
     service: ClienteService = Depends(get_cliente_service),
+    _usuario: Usuario = Depends(get_usuario_actual),
 ):
     return service.listar()
 
@@ -60,12 +66,14 @@ def listar_clientes(
     description="Busca y devuelve los datos de un cliente específico por su ID.",
     responses={
         200: {"description": "Cliente encontrado"},
+        401: {"description": "No autenticado"},
         404: {"description": "Cliente no encontrado"},
     },
 )
 def obtener_cliente(
     cliente_id: int,
     service: ClienteService = Depends(get_cliente_service),
+    _usuario: Usuario = Depends(get_usuario_actual),
 ):
     return service.obtener(cliente_id)
 
@@ -78,6 +86,7 @@ def obtener_cliente(
     description="Actualiza parcial o totalmente los datos (nombre, correo, teléfono) de un cliente existente.",
     responses={
         200: {"description": "Cliente actualizado exitosamente"},
+        401: {"description": "No autenticado"},
         404: {"description": "Cliente no encontrado"},
         409: {"description": "Conflicto: el nuevo correo ya pertenece a otro cliente"},
         422: {"description": "Error de validación en los datos enviados"},
@@ -87,6 +96,7 @@ def actualizar_cliente(
     cliente_id: int,
     datos: ClienteUpdate,
     service: ClienteService = Depends(get_cliente_service),
+    _usuario: Usuario = Depends(get_usuario_actual),
 ):
     return service.actualizar(cliente_id, datos)
 
@@ -98,6 +108,7 @@ def actualizar_cliente(
     description="Elimina un cliente del sistema si no posee reservas asociadas.",
     responses={
         204: {"description": "Cliente eliminado exitosamente (sin contenido)"},
+        401: {"description": "No autenticado"},
         404: {"description": "Cliente no encontrado"},
         409: {"description": "Conflicto: no se puede eliminar un cliente con reservas asociadas"},
     },
@@ -105,6 +116,7 @@ def actualizar_cliente(
 def eliminar_cliente(
     cliente_id: int,
     service: ClienteService = Depends(get_cliente_service),
+    _usuario: Usuario = Depends(get_usuario_actual),
 ):
     service.eliminar(cliente_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
